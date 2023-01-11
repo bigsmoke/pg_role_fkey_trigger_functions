@@ -120,6 +120,7 @@ begin
     return NEW;
 end;
 $$;
+
 comment
     on function enforce_fkey_to_db_role()
     is $markdown$

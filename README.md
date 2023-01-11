@@ -1,7 +1,7 @@
 ---
 pg_extension_name: pg_role_fkey_trigger_functions
-pg_extension_version: 0.9.2
-pg_readme_generated_at: 2023-01-07 11:17:58.512983+00
+pg_extension_version: 0.9.3
+pg_readme_generated_at: 2023-01-11 09:37:57.396936+00
 pg_readme_version: 0.3.8
 ---
 
@@ -267,8 +267,11 @@ begin
     begin
         insert into test__customer
             values (default, 'test__account_manager_that_doesnt_exist');
+        raise assert_failure
+            using message = 'The trigger function should have gotten upset about the missing `ROLE`.';
     exception
         when foreign_key_violation then
+            assert sqlerrm = 'Unknown database role: test__account_manager_that_doesnt_exist';
     end;
 
     insert into test__customer
@@ -285,8 +288,11 @@ begin
     begin
         update test__customer
             set account_manager_role = 'test__invalid_account_manager';
+        raise assert_failure
+            using message = 'The trigger function should have gotten upset about the missing `ROLE`.';
     exception
         when foreign_key_violation then
+            assert sqlerrm = 'Unknown database role: test__invalid_account_manager';
     end;
 
     -- This implicitly tests that both these roles exist
