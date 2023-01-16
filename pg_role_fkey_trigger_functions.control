@@ -15,6 +15,6 @@
 # along with `pg_role_fkey_trigger_functions`. If not, see
 # <https://www.gnu.org/licenses/>.
 
-default_version = '0.9.3'
+default_version = '0.10.0'
 superuser = false
 relocatable = true

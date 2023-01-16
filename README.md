@@ -1,8 +1,8 @@
 ---
 pg_extension_name: pg_role_fkey_trigger_functions
-pg_extension_version: 0.9.3
-pg_readme_generated_at: 2023-01-11 09:37:57.396936+00
-pg_readme_version: 0.3.8
+pg_extension_version: 0.10.0
+pg_readme_generated_at: 2023-01-16 22:50:50.215759+00
+pg_readme_version: 0.4.0
 ---
 
 The `pg_role_fkey_trigger_functions` PostgreSQL extension offers a
@@ -92,17 +92,13 @@ Function return type: `trigger`
 
 #### Function: `grant_role_in_column1_to_role_in_column2 ()`
 
-The `grant_role_in_column1_to_role_in_column2()` trigger function is useful if
-you have a table with (probably auto-generated) role names that need to be
-members of each other.
+ The `grant_role_in_column1_to_role_in_column2()` trigger function is useful if you have a table with (probably auto-generated) role names that need to be members of each other.
 
-`grant_role_in_column1_to_role_in_column2()` requires at least 2 arguments:
-argument 1 will contain the name of the column that will contain the role name
-which the role in the column of the second argument will be automatically made
-a member of.
+`grant_role_in_column1_to_role_in_column2()` requires at least 2 arguments: argument 1 will contain the name of the column that will contain the role name which the role in the column of the second argument will be automatically made a member of.
 
-Here's a full example, that also incorporates the other two trigger functions
-packaged into this extension:
+If you want the old `GRANT` to be `REVOKE`d `ON UPDATE`, use the companion trigger function: `revoke_role_in_column1_from_role_in_column2()`.
+
+Here's a full example, that also incorporates the other two trigger functions packaged into this extension:
 
 ```sql
 create role customers;
@@ -214,6 +210,16 @@ Function-local settings:
   *  `SET pg_readme.include_view_definitions TO true`
   *  `SET pg_readme.include_routine_definitions_like TO {test__%}`
 
+#### Function: `revoke_role_in_column1_from_role_in_column2 ()`
+
+Use this trigger function, in concert with `grant_role_in_column1_to_role_in_column2()`, if, `ON UPDATE`, you also want to `REVOKE` the old permissions granted earlier by `grant_role_in_column1_to_role_in_column2()`.
+
+**Beware:** This function cannot read your mind and thus will not be aware if there is still another relation that depends on the role in column 2 remaining a member of the role in column 1. As always: use at your own peril.
+
+Function return type: `trigger`
+
+Function attributes: `SECURITY DEFINER`
+
 #### Procedure: `test__pg_role_fkey_trigger_functions ()`
 
 Procedure-local settings:
@@ -235,6 +241,7 @@ declare
 begin
     create role test__customer_group;
     create role test__account_manager;
+    create role test__new_account_manager;
 
     create table test__customer (
         account_owner_role name
@@ -257,9 +264,16 @@ begin
         );
 
     create trigger grant_owner_impersonation_to_account_manager
-        after insert on test__customer
+        after insert or update on test__customer
         for each row
         execute function grant_role_in_column1_to_role_in_column2(
+            'account_owner_role', 'account_manager_role'
+        );
+
+    create trigger revoke_owner_impersonation_from_account_manager
+        after update on test__customer
+        for each row
+        execute function revoke_role_in_column1_from_role_in_column2(
             'account_owner_role', 'account_manager_role'
         );
 
@@ -277,12 +291,22 @@ begin
     insert into test__customer
         (account_owner_role, account_manager_role)
     values
-        (default, 'test__account_manager')
+        (default, 'test__account_manager'::regrole)
     returning
         account_owner_role
     into
         _inserted_account_owner_role
     ;
+
+    assert exists (select from pg_roles where rolname = _inserted_account_owner_role),
+        'The role should have been created by the maintain_referenced_role() trigger function.';
+
+    assert pg_has_role(_inserted_account_owner_role, 'test__customer_group', 'USAGE'),
+        'The new role should have became a member of the "test__customer_group".';
+
+    assert pg_has_role('test__account_manager'::regrole, _inserted_account_owner_role, 'USAGE'),
+        'The account manager should have gotten access to the new owner role by action of the'
+        ' grant_role_in_column1_to_role_in_column2() trigger function';
 
     <<set_invalid_role_reference>>
     begin
@@ -295,13 +319,19 @@ begin
             assert sqlerrm = 'Unknown database role: test__invalid_account_manager';
     end;
 
-    -- This implicitly tests that both these roles exist
-    assert pg_has_role('test__account_manager', _inserted_account_owner_role, 'USAGE');
-
     _updated_account_owner_role := 'test__custom_user_name';
     update test__customer
         set account_owner_role = _updated_account_owner_role;
+
     assert exists (select from pg_roles where rolname = _updated_account_owner_role);
+    assert not exists (select from pg_roles where rolname = _inserted_account_owner_role);
+    assert pg_has_role(_updated_account_owner_role, 'test__customer_group', 'USAGE');
+    assert pg_has_role('test__account_manager', _updated_account_owner_role, 'USAGE');
+
+    update test__customer
+        set account_manager_role = 'test__new_account_manager'::regrole;
+    assert not pg_has_role('test__account_manager', _updated_account_owner_role, 'USAGE');
+    assert pg_has_role('test__new_account_manager', _updated_account_owner_role, 'USAGE');
 
     delete from test__customer;
     assert not exists (select from pg_roles where rolname = _updated_account_owner_role);
