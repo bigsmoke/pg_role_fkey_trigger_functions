@@ -1,7 +1,7 @@
 ---
 pg_extension_name: pg_role_fkey_trigger_functions
-pg_extension_version: 0.10.0
-pg_readme_generated_at: 2023-01-16 22:50:50.215759+00
+pg_extension_version: 0.11.0
+pg_readme_generated_at: 2023-01-17 16:13:13.729986+00
 pg_readme_version: 0.4.0
 ---
 
@@ -131,6 +131,8 @@ create trigger grant_owner_impersonation_to_account_manager
     );
 ```
 
+See the `test__pg_role_fkey_trigger_functions()` procedure for a more extensive example.
+
 Function return type: `trigger`
 
 Function attributes: `SECURITY DEFINER`
@@ -251,29 +253,38 @@ begin
             not null
     );
 
-    create constraint trigger account_manager_role_fkey
+    create constraint trigger tg1_account_manager_role_fkey
         after insert or update on test__customer
         for each row
         execute function enforce_fkey_to_db_role('account_manager_role');
 
-    create trigger account_owner_role_fkey
+    create trigger tg2_account_owner_role_fkey
         after insert or update or delete on test__customer
         for each row
         execute function maintain_referenced_role(
             'account_owner_role', 'IN ROLE test__customer_group'
         );
 
-    create trigger grant_owner_impersonation_to_account_manager
-        after insert or update on test__customer
+    create trigger tg3_grant_owner_impersonation_to_account_manager
+        after insert on test__customer
         for each row
         execute function grant_role_in_column1_to_role_in_column2(
             'account_owner_role', 'account_manager_role'
         );
 
-    create trigger revoke_owner_impersonation_from_account_manager
+    create trigger tg4_revoke_owner_impersonation_from_old_account_manager
         after update on test__customer
         for each row
+        when (NEW.account_manager_role is distinct from OLD.account_manager_role)
         execute function revoke_role_in_column1_from_role_in_column2(
+            'account_owner_role', 'account_manager_role'
+        );
+
+    create trigger tg5_grant_owner_impersonation_to_new_account_manager
+        after update on test__customer
+        for each row
+        when (NEW.account_manager_role is distinct from OLD.account_manager_role)
+        execute function grant_role_in_column1_to_role_in_column2(
             'account_owner_role', 'account_manager_role'
         );
 
@@ -319,6 +330,10 @@ begin
             assert sqlerrm = 'Unknown database role: test__invalid_account_manager';
     end;
 
+    -- Dummy update, to check for rogue trigger behaviour
+    update test__customer
+        set account_manager_role = account_manager_role;
+
     _updated_account_owner_role := 'test__custom_user_name';
     update test__customer
         set account_owner_role = _updated_account_owner_role;
@@ -330,8 +345,10 @@ begin
 
     update test__customer
         set account_manager_role = 'test__new_account_manager'::regrole;
-    assert not pg_has_role('test__account_manager', _updated_account_owner_role, 'USAGE');
-    assert pg_has_role('test__new_account_manager', _updated_account_owner_role, 'USAGE');
+    assert not pg_has_role('test__account_manager', _updated_account_owner_role, 'USAGE'),
+        'The old account manager should have lost impersonation rights on this customer.';
+    assert pg_has_role('test__new_account_manager', _updated_account_owner_role, 'USAGE'),
+        'The new account manager should have gotten impersonation rights on this customer.';
 
     delete from test__customer;
     assert not exists (select from pg_roles where rolname = _updated_account_owner_role);
