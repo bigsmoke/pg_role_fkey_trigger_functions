@@ -1,8 +1,8 @@
 ---
 pg_extension_name: pg_role_fkey_trigger_functions
-pg_extension_version: 0.11.0
-pg_readme_generated_at: 2023-01-17 16:13:13.729986+00
-pg_readme_version: 0.4.0
+pg_extension_version: 0.11.1
+pg_readme_generated_at: 2023-02-12 17:00:46.138143+00
+pg_readme_version: 0.5.6
 ---
 
 The `pg_role_fkey_trigger_functions` PostgreSQL extension offers a
@@ -54,7 +54,7 @@ And public release turns out to improve discipline:
 
 ### Routines
 
-#### Function: `enforce_fkey_to_db_role ()`
+#### Function: `enforce_fkey_to_db_role()`
 
 The `enforce_fkey_to_db_role()` trigger function is meant to be used for
 constraint triggers that raise a `foreign_key_violation` exception when you
@@ -90,7 +90,7 @@ relationship _after_ `INSERT`ing or `UPDATE`ing a initially valid `ROLE` name.
 
 Function return type: `trigger`
 
-#### Function: `grant_role_in_column1_to_role_in_column2 ()`
+#### Function: `grant_role_in_column1_to_role_in_column2()`
 
  The `grant_role_in_column1_to_role_in_column2()` trigger function is useful if you have a table with (probably auto-generated) role names that need to be members of each other.
 
@@ -137,7 +137,7 @@ Function return type: `trigger`
 
 Function attributes: `SECURITY DEFINER`
 
-#### Function: `maintain_referenced_role ()`
+#### Function: `maintain_referenced_role()`
 
 The `maintain_referenced_role()` trigger function performs an `CREATE`,
 `ALTER`, or `DROP ROLE`, depending on (changes to) the column value which must
@@ -182,7 +182,7 @@ Function return type: `trigger`
 
 Function attributes: `SECURITY DEFINER`
 
-#### Function: `pg_role_fkey_trigger_functions_meta_pgxn ()`
+#### Function: `pg_role_fkey_trigger_functions_meta_pgxn()`
 
 Returns the JSON meta data that has to go into the `META.json` file needed for
 [PGXN—PostgreSQL Extension Network](https://pgxn.org/) packages.
@@ -198,11 +198,9 @@ Function return type: `jsonb`
 
 Function attributes: `STABLE`
 
-#### Function: `pg_role_fkey_trigger_functions_readme ()`
+#### Function: `pg_role_fkey_trigger_functions_readme()`
 
-This function utilizes the `pg_readme` extension to generate a thorough README
-for this extension, based on the `pg_catalog` and the `COMMENT` objects found
-therein.
+This function utilizes the `pg_readme` extension to generate a thorough README for this extension, based on the `pg_catalog` and the `COMMENT` objects found therein.
 
 Function return type: `text`
 
@@ -212,7 +210,7 @@ Function-local settings:
   *  `SET pg_readme.include_view_definitions TO true`
   *  `SET pg_readme.include_routine_definitions_like TO {test__%}`
 
-#### Function: `revoke_role_in_column1_from_role_in_column2 ()`
+#### Function: `revoke_role_in_column1_from_role_in_column2()`
 
 Use this trigger function, in concert with `grant_role_in_column1_to_role_in_column2()`, if, `ON UPDATE`, you also want to `REVOKE` the old permissions granted earlier by `grant_role_in_column1_to_role_in_column2()`.
 
@@ -222,7 +220,7 @@ Function return type: `trigger`
 
 Function attributes: `SECURITY DEFINER`
 
-#### Procedure: `test__pg_role_fkey_trigger_functions ()`
+#### Procedure: `test__pg_role_fkey_trigger_functions()`
 
 Procedure-local settings:
 
@@ -230,7 +228,7 @@ Procedure-local settings:
   *  `SET plpgsql.check_asserts TO true`
   *  `SET pg_readme.include_this_routine_definition TO true`
 
-```
+```sql
 CREATE OR REPLACE PROCEDURE role_fkey_trigger_functions.test__pg_role_fkey_trigger_functions()
  LANGUAGE plpgsql
  SET search_path TO 'role_fkey_trigger_functions', 'pg_temp'
@@ -362,4 +360,4 @@ $procedure$
 
 ## Colophon
 
-This `README.md` for the `pg_role_fkey_trigger_functions` `extension` was automatically generated using the [`pg_readme`](https://github.com/bigsmoke/pg_readme) PostgreSQL extension.
+This `README.md` for the `pg_role_fkey_trigger_functions` extension was automatically generated using the [`pg_readme`](https://github.com/bigsmoke/pg_readme) PostgreSQL extension.

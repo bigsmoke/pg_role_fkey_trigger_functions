@@ -189,6 +189,7 @@ exception
         return _readme;
 end;
 $plpgsql$;
+
 comment
     on function pg_role_fkey_trigger_functions_readme()
     is $markdown$
