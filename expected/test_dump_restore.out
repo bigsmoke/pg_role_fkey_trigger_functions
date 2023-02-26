@@ -1,0 +1,23 @@
+-- createdb
+-- psql -f 'sql/test_dump_restore.sql' -v 'extension_name=pg_role_fkey_trigger_functions' -v 'test_stage=pre-dump'
+CREATE EXTENSION
+CALL
+-- pg_dumpall --roles-only
+-- pg_dump --format=custom --file <dump_file>
+-- kill -9 <pg_pid>
+-- rm -r $PGDATA
+-- psql postgres -c '\set ON_ERROR_STOP' -f <roles_dump_file>
+SET
+SET
+SET
+CREATE ROLE
+ALTER ROLE
+CREATE ROLE
+ALTER ROLE
+CREATE ROLE
+ALTER ROLE
+ALTER ROLE
+GRANT ROLE
+-- pg_restore --create --dbname postgres <dump_file>
+-- psql -f 'sql/test_dump_restore.sql' -v 'extension_name=pg_role_fkey_trigger_functions' -v 'test_stage=post-restore'
+CALL

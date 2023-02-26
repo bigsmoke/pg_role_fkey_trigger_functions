@@ -1,7 +1,7 @@
 ---
 pg_extension_name: pg_role_fkey_trigger_functions
-pg_extension_version: 0.11.1
-pg_readme_generated_at: 2023-02-12 17:00:46.138143+00
+pg_extension_version: 0.11.2
+pg_readme_generated_at: 2023-02-27 09:48:21.10982+00
 pg_readme_version: 0.5.6
 ---
 
@@ -139,9 +139,7 @@ Function attributes: `SECURITY DEFINER`
 
 #### Function: `maintain_referenced_role()`
 
-The `maintain_referenced_role()` trigger function performs an `CREATE`,
-`ALTER`, or `DROP ROLE`, depending on (changes to) the column value which must
-point to a valid `ROLE` name.
+The `maintain_referenced_role()` trigger function performs an `CREATE`, `ALTER`, or `DROP ROLE`, depending on (changes to) the column value which must point to a valid `ROLE` name.
 
 `maintain_referenced_role()` takes at least one argument: the name of the
 column (of type `NAME`) in which the `ROLE` name will be stored.
@@ -182,6 +180,10 @@ Function return type: `trigger`
 
 Function attributes: `SECURITY DEFINER`
 
+Function-local settings:
+
+  *  `SET search_path TO pg_catalog`
+
 #### Function: `pg_role_fkey_trigger_functions_meta_pgxn()`
 
 Returns the JSON meta data that has to go into the `META.json` file needed for
@@ -219,6 +221,72 @@ Use this trigger function, in concert with `grant_role_in_column1_to_role_in_col
 Function return type: `trigger`
 
 Function attributes: `SECURITY DEFINER`
+
+#### Procedure: `test_dump_restore__maintain_referenced_role (text)`
+
+Procedure arguments:
+
+| Arg. # | Arg. mode  | Argument name                                                     | Argument type                                                        | Default expression  |
+| ------ | ---------- | ----------------------------------------------------------------- | -------------------------------------------------------------------- | ------------------- |
+|   `$1` |       `IN` | `test_stage$`                                                     | `text`                                                               |  |
+
+Procedure-local settings:
+
+  *  `SET search_path TO role_fkey_trigger_functions, pg_temp`
+  *  `SET plpgsql.check_asserts TO true`
+  *  `SET pg_readme.include_this_routine_definition TO true`
+
+```sql
+CREATE OR REPLACE PROCEDURE role_fkey_trigger_functions.test_dump_restore__maintain_referenced_role(IN "test_stage$" text)
+ LANGUAGE plpgsql
+ SET search_path TO 'role_fkey_trigger_functions', 'pg_temp'
+ SET "plpgsql.check_asserts" TO 'true'
+ SET "pg_readme.include_this_routine_definition" TO 'true'
+AS $procedure$
+declare
+    _inserted_account_owner_role name;
+begin
+    assert test_stage$ in ('pre-dump', 'post-restore');
+
+    if test_stage$ = 'pre-dump' then
+        create role test__customer_group;
+        create role test__account_manager;
+
+        create table test__customer (
+            account_owner_role name
+                primary key
+                default 'user_' || gen_random_uuid()::text,
+            account_manager_role name
+                not null
+        );
+
+        create trigger account_owner_role_fkey
+            after insert or update or delete on test__customer
+            for each row
+            execute function maintain_referenced_role(
+                'account_owner_role', 'IN ROLE test__customer_group'
+            );
+
+        insert into test__customer
+            (account_owner_role, account_manager_role)
+        values
+            (default, 'test__account_manager'::regrole)
+        returning
+            account_owner_role
+        into
+            _inserted_account_owner_role
+        ;
+
+        assert exists (select from pg_roles where rolname = _inserted_account_owner_role),
+            'The role should have been created by the maintain_referenced_role() trigger function.';
+
+    elsif test_stage$ = 'post-restore' then
+        assert (select count(*) from test__customer) = 1,
+            'Records should have been recreated without crashing.';
+    end if;
+end;
+$procedure$
+```
 
 #### Procedure: `test__pg_role_fkey_trigger_functions()`
 
@@ -295,6 +363,19 @@ begin
     exception
         when foreign_key_violation then
             assert sqlerrm = 'Unknown database role: test__account_manager_that_doesnt_exist';
+    end;
+
+    <<insert_existing_role>>
+    begin
+        create role test__preexisting_user;
+        insert into test__customer
+            values ('test__preexisting_user', 'test__account_manager'::regrole);
+        raise assert_failure
+            using message = 'The trigger function should have gotten upset about the existing `ROLE`.';
+    exception
+        when integrity_constraint_violation then
+            assert sqlerrm = 'Role test__preexisting_user already exists.',
+                sqlerrm;
     end;
 
     insert into test__customer
