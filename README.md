@@ -1,7 +1,7 @@
 ---
 pg_extension_name: pg_role_fkey_trigger_functions
-pg_extension_version: 0.11.2
-pg_readme_generated_at: 2023-02-27 09:48:21.10982+00
+pg_extension_version: 0.11.3
+pg_readme_generated_at: 2023-02-27 10:05:44.589052+00
 pg_readme_version: 0.5.6
 ---
 
@@ -186,14 +186,14 @@ Function-local settings:
 
 #### Function: `pg_role_fkey_trigger_functions_meta_pgxn()`
 
-Returns the JSON meta data that has to go into the `META.json` file needed for
-[PGXN—PostgreSQL Extension Network](https://pgxn.org/) packages.
+Returns the JSON meta data that has to go into the `META.json` file needed for PGXN—PostgreSQL Extension Network—packages.
 
 The `Makefile` includes a recipe to allow the developer to: `make META.json` to
 refresh the meta file with the function's current output, including the
 `default_version`.
 
-And indeed, `pg_role_fkey_trigger_functions` can be found on PGXN:
+And indeed, `pg_role_fkey_trigger_functions` can be found on the
+[PGXN—PostgreSQL Extension Network](https://pgxn.org/):
 https://pgxn.org/dist/pg_role_fkey_trigger_functions/
 
 Function return type: `jsonb`
