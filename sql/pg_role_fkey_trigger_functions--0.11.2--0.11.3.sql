@@ -4,6 +4,7 @@
 
 --------------------------------------------------------------------------------------------------------------
 
+-- License change from AGPL 3.0 → PostgreSQL license
 create or replace function pg_role_fkey_trigger_functions_meta_pgxn()
     returns jsonb
     stable
