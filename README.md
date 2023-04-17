@@ -1,7 +1,7 @@
 ---
 pg_extension_name: pg_role_fkey_trigger_functions
-pg_extension_version: 0.11.4
-pg_readme_generated_at: 2023-04-17 15:07:03.585251+01
+pg_extension_version: 0.11.5
+pg_readme_generated_at: 2023-04-17 15:57:11.232308+01
 pg_readme_version: 0.6.1
 ---
 
