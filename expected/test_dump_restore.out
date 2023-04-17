@@ -17,6 +17,8 @@ ALTER ROLE
 CREATE ROLE
 ALTER ROLE
 ALTER ROLE
+ALTER ROLE
+ALTER ROLE
 GRANT ROLE
 -- pg_restore --create --dbname postgres <dump_file>
 -- psql -f 'sql/test_dump_restore.sql' -v 'extension_name=pg_role_fkey_trigger_functions' -v 'test_stage=post-restore'

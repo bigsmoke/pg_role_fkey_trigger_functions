@@ -1,8 +1,8 @@
 ---
 pg_extension_name: pg_role_fkey_trigger_functions
-pg_extension_version: 0.11.3
-pg_readme_generated_at: 2023-02-27 10:05:44.589052+00
-pg_readme_version: 0.5.6
+pg_extension_version: 0.11.4
+pg_readme_generated_at: 2023-04-17 15:07:03.585251+01
+pg_readme_version: 0.6.1
 ---
 
 The `pg_role_fkey_trigger_functions` PostgreSQL extension offers a
@@ -267,6 +267,13 @@ begin
                 'account_owner_role', 'IN ROLE test__customer_group'
             );
 
+        create trigger account_manager_role_fkey
+            after insert or update on test__customer
+            for each row
+            execute function enforce_fkey_to_db_role(
+                'account_manager_role'
+            );
+
         insert into test__customer
             (account_owner_role, account_manager_role)
         values
@@ -283,6 +290,17 @@ begin
     elsif test_stage$ = 'post-restore' then
         assert (select count(*) from test__customer) = 1,
             'Records should have been recreated without crashing.';
+
+        _inserted_account_owner_role := (select account_owner_role from test__customer);
+
+        -- Now, let's lazily pretend that the database has been dropped and recreated
+        truncate table test__customer;  -- This should not trigger the `account_owner_role_fkey` trigger.
+
+        insert into test__customer
+            (account_owner_role, account_manager_role)
+        values
+            (_inserted_account_owner_role, 'test__account_manager'::regrole)
+        ;
     end if;
 end;
 $procedure$
