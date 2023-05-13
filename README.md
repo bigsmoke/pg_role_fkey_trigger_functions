@@ -1,9 +1,11 @@
 ---
 pg_extension_name: pg_role_fkey_trigger_functions
-pg_extension_version: 0.11.6
-pg_readme_generated_at: 2023-04-22 17:10:58.325078+01
-pg_readme_version: 0.6.1
+pg_extension_version: 0.11.7
+pg_readme_generated_at: 2023-05-13 15:24:03.458634+01
+pg_readme_version: 0.6.3
 ---
+
+# The `pg_role_fkey_trigger_functions` extension for PostgreSQL
 
 The `pg_role_fkey_trigger_functions` PostgreSQL extension offers a
 bunch of trigger functions to help establish and/or maintain referential
@@ -50,16 +52,29 @@ And public release turns out to improve discipline:
 - around keeping the number of interdependencies to a minimum (thus improving
   the architecture of the system using those extensions).
 
+## Authors and contributors
+
+* [Rowan](https://www.bigsmoke.us/) originated this extension in 2022 while
+  developing the PostgreSQL backend for the [FlashMQ SaaS MQTT cloud
+  broker](https://www.flashmq.com/).  Rowan does not like to see himself as a
+  tech person or a tech writer, but, much to his chagrin, [he
+  _is_](https://blog.bigsmoke.us/category/technology). Some of his chagrin
+  about remaining stuck in the IT industry for too long he poured into a book:
+  [_Why Programming Still Sucks_](https://www.whyprogrammingstillsucks.com/).
+  Much more than a “tech bro”, he identifies as a garden gnome, fairy and ork
+  rolled into one, and his passion is really to [regreen and reenchant his
+  environment](https://sapienshabitat.com/).  One of his proudest achievements
+  is to be the third generation ecological gardener to grow the wild garden
+  around his beautiful [family holiday home in the forest of Norg, Drenthe,
+  the Netherlands](https://www.schuilplaats-norg.nl/) (available for rent!).
+
 ## Object reference
 
 ### Routines
 
 #### Function: `enforce_fkey_to_db_role()`
 
-The `enforce_fkey_to_db_role()` trigger function is meant to be used for
-constraint triggers that raise a `foreign_key_violation` exception when you
-are trying to `INSERT` or `UPDATE` a value in the given column that is not a
-valid `ROLE` name.
+The `enforce_fkey_to_db_role()` trigger function is meant to be used for constraint triggers that raise a `foreign_key_violation` exception when you are trying to `INSERT` or `UPDATE` a value in the given column that is not a valid `ROLE` name.
 
 `enforce_fkey_to_db_role()` takes one argument: the name of a column that is to
 be treated as a foreign key to a database `ROLE`.
