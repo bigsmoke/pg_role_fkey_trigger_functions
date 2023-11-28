@@ -1,8 +1,8 @@
 ---
 pg_extension_name: pg_role_fkey_trigger_functions
-pg_extension_version: 0.11.7
-pg_readme_generated_at: 2023-05-13 15:24:03.458634+01
-pg_readme_version: 0.6.3
+pg_extension_version: 0.11.8
+pg_readme_generated_at: 2023-11-28 17:41:18.415162+00
+pg_readme_version: 0.6.5
 ---
 
 # The `pg_role_fkey_trigger_functions` extension for PostgreSQL
