@@ -26,13 +26,13 @@
             }
         }
     },
-    "version": "0.11.8",
+    "version": "0.11.9",
     "abstract": "A bunch of trigger functions to help establish and/or maintain referential integrity for columns that reference PostgreSQL ROLE NAMEs.",
     "provides": {
         "pg_role_fkey_trigger_functions": {
-            "file": "pg_role_fkey_trigger_functions--0.11.8.sql",
+            "file": "pg_role_fkey_trigger_functions--0.11.9.sql",
             "docfile": "README.md",
-            "version": "0.11.8"
+            "version": "0.11.9"
         }
     },
     "meta-spec": {
