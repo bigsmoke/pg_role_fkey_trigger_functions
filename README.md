@@ -1,7 +1,7 @@
 ---
 pg_extension_name: pg_role_fkey_trigger_functions
-pg_extension_version: 1.0.0
-pg_readme_generated_at: 2025-05-18 12:43:07.148787+01
+pg_extension_version: 1.0.1
+pg_readme_generated_at: 2025-05-18 13:27:38.24398+01
 pg_readme_version: 0.7.0
 ---
 
@@ -511,6 +511,7 @@ begin
             account_manager_role name
                 not null
         );
+        perform pg_role_fkey_trigger_functions__trust_table('test__customer');
 
         create trigger account_owner_role_fkey
             after insert or update or delete on test__customer

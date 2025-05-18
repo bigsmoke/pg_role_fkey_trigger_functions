@@ -18,7 +18,14 @@ up-to-date `CHANGELOG.md` file can be generated).
 
 ---
 
-## [1.0.0] – unreleased
+## [1.0.1] – unreleased
+
+[1.0.1]: https://github.com/bigsmoke/pg_role_fkey_trigger_functions/compare/v1.0.0…v1.0.1
+
+- This bugfix release only fixes the `CHANGELOG.md`, because, actually,
+  version 1.0.0 _was_ release when version 1.0.0 was released.
+
+## [1.0.0] – 2025-05-18
 
 [1.0.0]: https://github.com/bigsmoke/pg_role_fkey_trigger_functions/compare/v0.11.9…v1.0.0
 
