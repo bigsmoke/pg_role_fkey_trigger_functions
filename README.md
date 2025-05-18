@@ -1,8 +1,8 @@
 ---
 pg_extension_name: pg_role_fkey_trigger_functions
-pg_extension_version: 0.11.9
-pg_readme_generated_at: 2024-01-05 20:56:38.461171+00
-pg_readme_version: 0.6.5
+pg_extension_version: 1.0.0
+pg_readme_generated_at: 2025-05-18 12:43:07.148787+01
+pg_readme_version: 0.7.0
 ---
 
 # The `pg_role_fkey_trigger_functions` extension for PostgreSQL
@@ -11,29 +11,126 @@ The `pg_role_fkey_trigger_functions` PostgreSQL extension offers a
 bunch of trigger functions to help establish and/or maintain referential
 integrity for columns that reference PostgreSQL `ROLE` `NAME`s.
 
-`pg_role_fkey_trigger_functions` contains two trigger functions
-which can be applied as a table `CONSTRAINT TRIGGER`:
+`pg_role_fkey_trigger_functions` contains trigger functions for either
+_checking_ or _establishing_ referential integrity pertaining to roles
+referenced from table columns:
 
-1. `enforce_fkey_to_db_role()` _enforces_ referential integrity by getting angry
-   when you try to `INSERT` or `UPDATE` a row value that is not an existing
-   `ROLE`.
-2. `maintain_referenced_role()` _establishes_ referential integrity by
+1. [`enforce_fkey_to_db_role()`] _enforces_ referential integrity by getting
+   angry when you try to `INSERT`, `UPDATE`, or `COPY` a row value that is not an
+   existing `ROLE`.
+2. [`maintain_referenced_role()`] _establishes_ referential integrity by
    `CREATE`ing, `ALTER`ing, and `DROP`ing `ROLE`s to stay in sync with the
    value(s) in the column(s) being watched by the trigger function.
 
 Thus:
 
-1. `enforce_fkey_to_db_role()` works very much like foreign keys normally works;
+1. `enforce_fkey_to_db_role()` works very much like foreign keys normally work;
    while
 2. `maintain_referenced_role()` works exactly in the opposite direction that
    foreign keys normally work.
 
-There is also a third trigger function, to maintain role inter-relationships:
-`grant_role_in_column1_to_role_in_column2()`.
+In addition to `maintain_referenced_role()`, there are a couple of trigger
+functions to maintain dynamic role membership:
 
-See the documentation for the
-[`grant_role_in_column1_to_role_in_column2()`](#function-grant_role_in_column1_to_role_in_column2)
-trigger function for an example that builds on all 3 trigger functions.
+* [`grant_role_in_column1_to_role_in_column2()`], and its counterpart
+* [`revoke_role_in_column1_from_role_in_column2()`].
+
+Note that these `*_role_in_column1_(to|from)_role_in_column2()` functions are
+only necesary if you need anything beyond the membership options that can be
+specified as static arguments to the [`maintain_referenced_role()` trigger
+function](#function-maintain_referenced_role).
+
+The [`grant_role_in_column1_to_role_in_column2()`] trigger function
+documentation features an example that builds on all 3 trigger functions.
+
+[`enforce_fkey_to_db_role()`]:
+    #function-enforce_fkey_to_db_role
+
+[`maintain_referenced_role()`]:
+    #function-maintain_referenced_role
+
+[`grant_role_in_column1_to_role_in_column2()`]:
+    #function-grant_role_in_column1_to_role_in_column2
+
+[`revoke_role_in_column1_from_role_in_column2()`]:
+    #function-revoke_role_in_column1_from_role_in_column2
+
+## Secure `pg_role_fkey_trigger_functions` usage
+
+[`maintain_referenced_role()`], [`grant_role_in_column1_to_role_in_column2()`]
+and [`revoke_role_in_column1_from_role_in_column2()`] are all `SECURITY DEFINER`
+functions.  That means that whoever was granted `EXECUTE` permission on
+these functions could grant themselves membership in whichever role they wished
+simply by creating a temporary table and creating a couple of triggers.
+
+To mitigate this ~~risk~~<ins>certainty</ins>, `pg_role_fkey_trigger_functions`
+version 1.0.0 introduced a new `pg_role_fkey_trigger_functions.trusted_tables`
+setting.  The aforementioned `SECURITY DEFINER` trigger functions will refuse to
+function [pun intended] on tabled that are not part of the array of trusted
+tables stored in this setting (as a `text` string, like all settings must be).
+
+The best way to add tables to this list of trusted tables, is to execute the
+[`pg_role_fkey_trigger_functions__trust_table(regclass, regrole)`] function.
+
+To retrieve the list of currently trusted tables, there's the
+[`pg_role_fkey_trigger_functions__trusted_tables()`] function. This is also the
+function that is used internally by `pg_role_fkey_trigger_functions`
+instead of `current_setting()`.  `current_setting()` is never used because the
+list of trusted tables could then be overridden for the current session or
+transaction simply by calling the [`set_config()`] function or [`SET` command]:
+
+```sql
+-- Using the `SET` command:
+set pg_role_fkey_trigger_functions.trusted_tables TO '{pg_temp.evil_temp_tbl}';
+
+-- Using the `set_config()` function:
+select set_config(
+    'pg_role_fkey_trigger_functions.trusted_tables',
+    '{pg_temp.evil_temp_tbl}',
+    false
+);
+
+-- Or, appending to instead of replacing the list of trusted tables:
+select set_config(
+    'pg_role_fkey_trigger_functions.trusted_tables',
+    coalesce(
+        current_setting('pg_role_fkey_trigger_functions.trusted_tables', true),
+        '{}'
+    )::text[] || 'pg_temp.evil_temp_tbl',
+    false
+);
+```
+
+See the opening section of [the README of the `pg_safer_settings` extension]
+for a complete exposition of how and why that extension's `pg_db_setting()`
+function and the [`pg_role_fkey_trigger_functions__trusted_tables()`] function
+(modelled after that `pg_db_setting()` function) bypasses that problem.
+
+[`pg_role_fkey_trigger_functions__trust_table(regclass, regrole)`]:
+    #function-pg_role_fkey_trigger_functions__trust_table-regclass-regrole
+
+[`pg_role_fkey_trigger_functions__trusted_tables()`]:
+    #function-pg_role_fkey_trigger_functions__trusted_tables-bool-regrole
+
+[`set_config()`]:
+    https://www.postgresql.org/docs/current/functions-admin.html#FUNCTIONS-ADMIN-SET
+
+[`SET` command]:
+    https://www.postgresql.org/docs/current/sql-set.html
+
+[the README of the `pg_safer_settings` extension]:
+    https://github.com/bigsmoke/pg_safer_settings/blob/master/README.md
+
+## `pg_role_fkey_trigger_functions` settings
+
+| Setting name                                           | Description                                                | Example value                       |
+| ------------------------------------------------------ | ---------------------------------------------------------- | ----------------------------------- |
+| `pg_role_fkey_trigger_functions.trusted_tables`        | See [_Secure `pg_role_fkey_trigger_functions` usage_].     | `'{schema_a.tbl_1,schema_a.tbl_2}'` |
+| `pg_role_fkey_trigger_functions.search_path_template`  | Template to (re)set the function's `search_path`.          | `'pg_catalog, "$extension_schema"'` |
+| `pg_role_fkey_trigger_functions.readme_url`            | The (online) location to find this extension's `README.md` | `'http://example.com/README.html'`  |
+
+[_Secure `pg_role_fkey_trigger_functions` usage_]:
+    #secure-pg_role_fkey_trigger_functions-usage
 
 ## The origins of the `pg_role_fkey_trigger_functions` extension
 
@@ -97,23 +194,68 @@ create constraint trigger row_owner_role_must_exist
     execute function enforce_fkey_to_db_role('row_owner_role');
 ```
 
-Sadly, it is (presently, with PostgreSQL 15) not possible to provide support
+Sadly, it is (presently, with PostgreSQL 17) not possible to provide support
 for `ON DELETE` and `ON UPDATE` options because PostgreSQL event triggers do
 not catch DDL commands that `CREATE`, `ALTER`, and `DROP` roles.  Otherwise, we
 could have an event trigger that also gets upset if you invalidate the FK role
 relationship _after_ `INSERT`ing or `UPDATE`ing a initially valid `ROLE` name.
 
+The renaming of roles _can_ be accomodated, by _not_ using this trigger function
+and instead using the `regrole` `oid`-ish type rather than `name` for the
+foreign key column:
+
+```sql
+create table my_table (
+    id int
+        primary key,
+    row_owner_role regrole
+        not null unique
+);
+
+create role "Piet-Joris";
+assert to_regrole('Piet-Joris') is not null;  -- So, `"piet-joris"` exists.
+assert to_regrole('Jan-Pieter') is null;      -- But, `"jan-pieter"` does not.
+
+-- And thus the following will work, due to the implicit conversion of
+-- `'Piet-Joris'::text` to `regrole`:
+insert into my_table (id, row_owner_role) values (12, 'Piet-Joris');
+
+-- Yet, the following will crash, during the attempted conversion from
+-- `'Jan-Pieter'::text` to `regrole`:
+insert into my_table (id, row_owner_role) values (13, 'Jan-Pieter');
+```
+
 Function return type: `trigger`
+
+Function-local settings:
+
+  *  `SET search_path TO pg_catalog`
 
 #### Function: `grant_role_in_column1_to_role_in_column2()`
 
- The `grant_role_in_column1_to_role_in_column2()` trigger function is useful if you have a table with (probably auto-generated) role names that need to be members of each other.
+The `grant_role_in_column1_to_role_in_column2()` trigger function is useful if
+you have a table with (probably auto-generated) role names that need to be
+members of each other.
 
-`grant_role_in_column1_to_role_in_column2()` requires at least 2 arguments: argument 1 will contain the name of the column that will contain the role name which the role in the column of the second argument will be automatically made a member of.
+| Trigger arg.  | required  | Example value                                   |
+| ------------- | --------- | ----------------------------------------------- |
+| `tg_argv[0]`  | yes       | `a_column`                                      |
+| `tg_argv[1]`  | yes       | `another_column`                                |
+| `tg_argv[2]`  | no        | `WITH ADMIN OPTION, SET TRUE GRANTED BY user_x` |
 
-If you want the old `GRANT` to be `REVOKE`d `ON UPDATE`, use the companion trigger function: `revoke_role_in_column1_from_role_in_column2()`.
+`grant_role_in_column1_to_role_in_column2()` requires at least 2 arguments:
+argument 1 will contain the name of the column that will contain the role name
+which the role in the column of the second argument will be automatically made
+a member of.
 
-Here's a full example, that also incorporates the other two trigger functions packaged into this extension:
+The optional third argument will be passed on in whole to each `ALTER ROLE`
+statement and can contain `WITH` options or a `GRANTED BY role_specification`.
+
+If you want the old `GRANT` to be `REVOKE`d `ON UPDATE`, use the companion
+trigger function: `revoke_role_in_column1_from_role_in_column2()`.
+
+Here's a full example, that also incorporates the other two trigger functions
+packaged into this extension:
 
 ```sql
 create role customers;
@@ -152,9 +294,18 @@ Function return type: `trigger`
 
 Function attributes: `SECURITY DEFINER`
 
+Function-local settings:
+
+  *  `SET pg_role_fkey_trigger_functions.search_path_template TO pg_catalog, "$extension_schema"`
+
 #### Function: `maintain_referenced_role()`
 
 The `maintain_referenced_role()` trigger function performs an `CREATE`, `ALTER`, or `DROP ROLE`, depending on (changes to) the column value which must point to a valid `ROLE` name.
+
+| Trigger arg.  | Description                                | Example value         |
+| ------------- | ------------------------------------------ | ----------------------|
+| `tg_argv[0]`  | The name of the column with the role name. | `'dynamic_role'`      |
+| `tg_argv[1]`  | `CREATE ROLE` command options.             | `'WITH ADMIN rowan'`  |
 
 `maintain_referenced_role()` takes at least one argument: the name of the
 column (of type `NAME`) in which the `ROLE` name will be stored.
@@ -197,6 +348,12 @@ Function attributes: `SECURITY DEFINER`
 
 Function-local settings:
 
+  *  `SET pg_role_fkey_trigger_functions.search_path_template TO pg_catalog, "$extension_schema"`
+
+#### Procedure: `pg_role_fkey_trigger_functions__alter_routines_to_reset_search_()`
+
+Procedure-local settings:
+
   *  `SET search_path TO pg_catalog`
 
 #### Function: `pg_role_fkey_trigger_functions_meta_pgxn()`
@@ -219,6 +376,9 @@ Function attributes: `STABLE`
 
 This function utilizes the `pg_readme` extension to generate a thorough README for this extension, based on the `pg_catalog` and the `COMMENT` objects found therein.
 
+The schema in which `pg_readme` was installed doesn't need to be in the
+`search_path` when executing this function.  It takes care of that itself.
+
 Function return type: `text`
 
 Function-local settings:
@@ -227,15 +387,92 @@ Function-local settings:
   *  `SET pg_readme.include_view_definitions TO true`
   *  `SET pg_readme.include_routine_definitions_like TO {test__%}`
 
+#### Function: `pg_role_fkey_trigger_functions__trusted_tables (regrole, text, boolean, boolean, boolean)`
+
+Returns the array of relations (of type `regclass[]`) that are trusted by the `SECURITY DEFINER` trigger functions.
+
+This function has two arguments, both optional:
+
+| Arg.  | Type       | Default value            | Description                                            |
+| ----- | ---------- | -------------------------| ------------------------------------------------------ |
+| `$1`  | `regrole`  | `current_user::regrole`  | A role whose role-specific settings will be included.  |
+| `$2`  | `text`  `  | `current_database()`     | Whether to include database-wide settings or not.      |
+
+See the [_Secure `pg_role_fkey_trigger_functions` usage_] section for details
+as to how and why this list is maintained.
+
+[_Secure `pg_role_fkey_trigger_functions` usage_]:
+    #secure-pg_role_fkey_trigger_functions-usage
+
+Function arguments:
+
+| Arg. # | Arg. mode  | Argument name                                                     | Argument type                                                        | Default expression  |
+| ------ | ---------- | ----------------------------------------------------------------- | -------------------------------------------------------------------- | ------------------- |
+|   `$1` |       `IN` | `role$`                                                           | `regrole`                                                            | `(CURRENT_USER)::regrole` |
+|   `$2` |       `IN` | `db$`                                                             | `text`                                                               | `current_database()` |
+|   `$3` |       `IN` | `db_not_role_specific$`                                           | `boolean`                                                            | `true` |
+|   `$4` |       `IN` | `db_and_role_specific$`                                           | `boolean`                                                            | `true` |
+|   `$5` |       `IN` | `role_not_db_specific$`                                           | `boolean`                                                            | `true` |
+
+Function return type: `regclass[]`
+
+Function attributes: `STABLE`, `LEAKPROOF`, `PARALLEL SAFE`
+
+Function-local settings:
+
+  *  `SET search_path TO pg_catalog`
+
+#### Function: `pg_role_fkey_trigger_functions__trust_table (regclass, regrole, text)`
+
+Function arguments:
+
+| Arg. # | Arg. mode  | Argument name                                                     | Argument type                                                        | Default expression  |
+| ------ | ---------- | ----------------------------------------------------------------- | -------------------------------------------------------------------- | ------------------- |
+|   `$1` |       `IN` | `table$`                                                          | `regclass`                                                           |  |
+|   `$2` |       `IN` | `role$`                                                           | `regrole`                                                            | `NULL::regrole` |
+|   `$3` |       `IN` | `db$`                                                             | `text`                                                               | `current_database()` |
+
+Function return type: `regclass[]`
+
+Function attributes: `LEAKPROOF`
+
+Function-local settings:
+
+  *  `SET pg_role_fkey_trigger_functions.search_path_template TO pg_catalog, "$extension_schema"`
+
+#### Function: `pg_role_fkey_trigger_functions__trust_tables (regclass[], regrole, text)`
+
+Function arguments:
+
+| Arg. # | Arg. mode  | Argument name                                                     | Argument type                                                        | Default expression  |
+| ------ | ---------- | ----------------------------------------------------------------- | -------------------------------------------------------------------- | ------------------- |
+|   `$1` |       `IN` | `tables$`                                                         | `regclass[]`                                                         |  |
+|   `$2` |       `IN` | `role$`                                                           | `regrole`                                                            | `NULL::regrole` |
+|   `$3` |       `IN` | `db$`                                                             | `text`                                                               | `current_database()` |
+
+Function return type: `regclass[]`
+
+Function attributes: `LEAKPROOF`
+
+Function-local settings:
+
+  *  `SET pg_role_fkey_trigger_functions.search_path_template TO pg_catalog, "$extension_schema"`
+
 #### Function: `revoke_role_in_column1_from_role_in_column2()`
 
 Use this trigger function, in concert with `grant_role_in_column1_to_role_in_column2()`, if, `ON UPDATE`, you also want to `REVOKE` the old permissions granted earlier by `grant_role_in_column1_to_role_in_column2()`.
+
+For this trigger function to work, the
 
 **Beware:** This function cannot read your mind and thus will not be aware if there is still another relation that depends on the role in column 2 remaining a member of the role in column 1. As always: use at your own peril.
 
 Function return type: `trigger`
 
 Function attributes: `SECURITY DEFINER`
+
+Function-local settings:
+
+  *  `SET pg_role_fkey_trigger_functions.search_path_template TO pg_catalog, "$extension_schema"`
 
 #### Procedure: `test_dump_restore__maintain_referenced_role (text)`
 
@@ -247,14 +484,14 @@ Procedure arguments:
 
 Procedure-local settings:
 
-  *  `SET search_path TO role_fkey_trigger_functions, pg_temp`
+  *  `SET pg_role_fkey_trigger_functions.search_path_template TO pg_catalog, "$extension_schema"`
   *  `SET plpgsql.check_asserts TO true`
   *  `SET pg_readme.include_this_routine_definition TO true`
 
 ```sql
-CREATE OR REPLACE PROCEDURE role_fkey_trigger_functions.test_dump_restore__maintain_referenced_role(IN "test_stage$" text)
+CREATE OR REPLACE PROCEDURE test_dump_restore__maintain_referenced_role(IN "test_stage$" text)
  LANGUAGE plpgsql
- SET search_path TO 'role_fkey_trigger_functions', 'pg_temp'
+ SET "pg_search_path_template" TO 'pg_catalog, "$extension_schema"'
  SET "plpgsql.check_asserts" TO 'true'
  SET "pg_readme.include_this_routine_definition" TO 'true'
 AS $procedure$
@@ -325,14 +562,14 @@ $procedure$
 
 Procedure-local settings:
 
-  *  `SET search_path TO role_fkey_trigger_functions, pg_temp`
+  *  `SET pg_role_fkey_trigger_functions.search_path_template TO pg_catalog, "$extension_schema"`
   *  `SET plpgsql.check_asserts TO true`
   *  `SET pg_readme.include_this_routine_definition TO true`
 
 ```sql
-CREATE OR REPLACE PROCEDURE role_fkey_trigger_functions.test__pg_role_fkey_trigger_functions()
+CREATE OR REPLACE PROCEDURE test__pg_role_fkey_trigger_functions()
  LANGUAGE plpgsql
- SET search_path TO 'role_fkey_trigger_functions', 'pg_temp'
+ SET "pg_search_path_template" TO 'pg_catalog, "$extension_schema"'
  SET "plpgsql.check_asserts" TO 'true'
  SET "pg_readme.include_this_routine_definition" TO 'true'
 AS $procedure$
@@ -343,6 +580,8 @@ begin
     create role test__customer_group;
     create role test__account_manager;
     create role test__new_account_manager;
+    create role test__youngest_intern;
+    create role test__trusting_role;
 
     create table test__customer (
         account_owner_role name
@@ -359,8 +598,7 @@ begin
 
     create trigger tg2_account_owner_role_fkey
         after insert or update or delete on test__customer
-        for each row
-        execute function maintain_referenced_role(
+        for each row execute function maintain_referenced_role(
             'account_owner_role', 'IN ROLE test__customer_group'
         );
 
@@ -387,29 +625,74 @@ begin
             'account_owner_role', 'account_manager_role'
         );
 
-    <<insert_invalid_role_reference>>
+    assert pg_role_fkey_trigger_functions__trusted_tables() = '{}'::regclass[];
+    assert pg_role_fkey_trigger_functions__trusted_tables('test__trusting_role') = '{}'::regclass[];
+    perform pg_role_fkey_trigger_functions__trust_table('test__customer', 'test__trusting_role');
+    assert pg_role_fkey_trigger_functions__trusted_tables('test__trusting_role') = array[
+        'test__customer'::regclass
+    ]::regclass[], pg_role_fkey_trigger_functions__trusted_tables('test__trusting_role') ;
+
+    <<untrusted_table>>
+    declare
     begin
         insert into test__customer
-            values (default, 'test__account_manager_that_doesnt_exist');
+            (account_owner_role, account_manager_role)
+        values
+            (default, 'test__account_manager'::regrole)
+        returning
+            account_owner_role
+        into
+            _inserted_account_owner_role
+        ;
+        raise assert_failure
+            using message = 'The trigger function should have raised `insufficient_privilege`.';
+    exception
+        when insufficient_privilege then
+    end;
+
+    perform pg_role_fkey_trigger_functions__trust_table('test__customer');
+
+    <<insert_invalid_role_reference>>
+    declare
+        _message_text text;
+        _pg_exception_detail text;
+        _nonexistent_role name := 'test__account_manager_that_doesnt_exist';
+    begin
+        insert into test__customer
+            values (default, _nonexistent_role);
         raise assert_failure
             using message = 'The trigger function should have gotten upset about the missing `ROLE`.';
     exception
         when foreign_key_violation then
-            assert sqlerrm = 'Unknown database role: test__account_manager_that_doesnt_exist';
+            get stacked diagnostics
+                _message_text := message_text
+                ,_pg_exception_detail := pg_exception_detail
+            ;
+
+            assert _message_text = format('Unknown database role: %I', _nonexistent_role);
+            assert _pg_exception_detail = format(
+                '`TRIGGER tg1_account_manager_role_fkey AFTER INSERT ON %I.test__customer FOR EACH ROW'
+                ' EXECUTE FUNCTION enforce_fkey_to_db_role(%L)`'
+                ,current_schema(), 'account_manager_role'
+            ), format('Unexpected error detail: %s', _pg_exception_detail);
     end;
 
     <<insert_existing_role>>
+    declare
+        _role constant name := 'test__preexisting_user';
     begin
         create role test__preexisting_user;
         insert into test__customer
-            values ('test__preexisting_user', 'test__account_manager'::regrole);
-        raise assert_failure
-            using message = 'The trigger function should have gotten upset about the existing `ROLE`.';
+            values (_role, 'test__account_manager'::regrole);
+        raise assert_failure using message = format(
+            'The trigger function should have gotten upset about the existing `%I` role.', _role
+        );
     exception
         when integrity_constraint_violation then
-            assert sqlerrm = 'Role test__preexisting_user already exists.',
-                sqlerrm;
-    end;
+            assert sqlerrm = format('Role %I already exists.', _role),
+                format('Unexpected `sqlerrm = %L`', sqlerrm)
+            ;
+    end insert_existing_role;
 
     insert into test__customer
         (account_owner_role, account_manager_role)
@@ -427,9 +710,11 @@ begin
     assert pg_has_role(_inserted_account_owner_role, 'test__customer_group', 'USAGE'),
         'The new role should have became a member of the "test__customer_group".';
 
-    assert pg_has_role('test__account_manager'::regrole, _inserted_account_owner_role, 'USAGE'),
-        'The account manager should have gotten access to the new owner role by action of the'
-        ' grant_role_in_column1_to_role_in_column2() trigger function';
+    assert pg_has_role('test__account_manager', _inserted_account_owner_role::regrole, 'USAGE'), format(
+        'The %s role should have gotten access to the new %s "account_owner_role" by action of the'
+        ' grant_role_in_column1_to_role_in_column2() trigger function'
+        ,'test__account_manager', _inserted_account_owner_role
+    );
 
     <<set_invalid_role_reference>>
     begin
@@ -464,6 +749,10 @@ begin
 
     delete from test__customer;
     assert not exists (select from pg_roles where rolname = _updated_account_owner_role);
+    drop role test__customer_group;
+    drop role test__account_manager;
+    drop role test__new_account_manager;
+    drop role test__trusting_role;
 
     raise transaction_rollback;
 exception

@@ -1,9 +1,15 @@
 -- complain if script is sourced in `psql`, rather than via `CREATE EXTENSION`
 \echo Use "CREATE EXTENSION pg_role_fkey_trigger_functions" to load this file. \quit
 
---------------------------------------------------------------------------------------------------------------
 
--- Add the missing role-based settings (that I really should have added to the previous update script).
+/**
+ * CHANGELOG.md:
+ *
+ * - The extension upgrade script from version 0.11.3 to 0.11.4 neglected to
+ *   add role-specific settings for roles previously added by the
+ *   `maintain_referenced_role()` trigger function.  This is now retroactively
+ *   done by the version 0.11.4 to 0.11.5 upgrade script.
+ */
 do $$
 declare
     _role name;
@@ -48,5 +54,3 @@ begin
     end loop;
 end;
 $$;
-
---------------------------------------------------------------------------------------------------------------

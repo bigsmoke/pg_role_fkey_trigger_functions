@@ -1,10 +1,13 @@
-
 -- complain if script is sourced in `psql`, rather than via `CREATE EXTENSION`
 \echo Use "CREATE EXTENSION pg_role_fkey_trigger_functions" to load this file. \quit
 
---------------------------------------------------------------------------------------------------------------
 
--- License change from AGPL 3.0 → PostgreSQL license
+/**
+ * CHANGELOG.md:
+ *
+ * - The `pg_role_fkey_trigger_functions` license was changed from AGPL 3.0 to
+ *   the PostgreSQL license.
+ */
 create or replace function pg_role_fkey_trigger_functions_meta_pgxn()
     returns jsonb
     stable
@@ -97,7 +100,6 @@ create or replace function pg_role_fkey_trigger_functions_meta_pgxn()
         ]
     );
 
---------------------------------------------------------------------------------------------------------------
 
 comment on function pg_role_fkey_trigger_functions_meta_pgxn() is
 $md$Returns the JSON meta data that has to go into the `META.json` file needed for PGXN—PostgreSQL Extension Network—packages.
@@ -110,5 +112,3 @@ And indeed, `pg_role_fkey_trigger_functions` can be found on the
 [PGXN—PostgreSQL Extension Network](https://pgxn.org/):
 https://pgxn.org/dist/pg_role_fkey_trigger_functions/
 $md$;
-
---------------------------------------------------------------------------------------------------------------

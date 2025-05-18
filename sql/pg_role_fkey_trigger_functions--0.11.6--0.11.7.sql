@@ -1,9 +1,13 @@
 -- Complain if script is sourced in `psql`, rather than via `CREATE EXTENSION`.
 \echo Use "CREATE EXTENSION pg_role_fkey_trigger_functions" to load this file. \quit
 
---------------------------------------------------------------------------------------------------------------
 
--- Add author section
+/**
+ * CHANGELOG.md:
+ *
+ * - An author section was added to the (`comment on extension` used to
+ *   generate) `README.md`.
+ */
 comment on extension pg_role_fkey_trigger_functions is
 $markdown$
 # The `pg_role_fkey_trigger_functions` extension for PostgreSQL
@@ -74,5 +78,3 @@ And public release turns out to improve discipline:
 
 <?pg-readme-colophon?>
 $markdown$;
-
---------------------------------------------------------------------------------------------------------------

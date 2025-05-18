@@ -1,13 +1,19 @@
 #!/bin/bash
 
 SCRIPT_NAME=$(basename "$0")
-PG_BIN_DIR="$(pg_config --bindir)"
+if [[ -z "$PG_CONFIG" ]]; then
+    PG_CONFIG="$(pg_config --bindir)/pg_config"
+fi
+PG_BIN_DIR="$("$PG_CONFIG" --bindir)"
 
 usage() {
     cat <<EOF
 Usage:
-    $SCRIPT_NAME --extension <extension_name> --psql-script-file <file> --out-file <file> --expected-out-file <file>
+    $SCRIPT_NAME [options] --extension <extension_name> --psql-script-file <file> --out-file <file> --expected-out-file <file>
     $SCRIPT_NAME --help|-h
+
+Options:
+    --keep-temp-dir
 EOF
 }
 
@@ -15,6 +21,7 @@ psql_script_file=""
 expected_out_file=""
 out_file=""
 extension_name=""
+keep_temp_dir=""
 while [[ "$#" -gt 0 ]]; do
     case "$1" in
         -h|--help)
@@ -36,6 +43,10 @@ while [[ "$#" -gt 0 ]]; do
         --extension)
             extension_name="$2"
             shift 2
+            ;;
+        --keep-temp-dir)
+            keep_temp_dir="alright"
+            shift
             ;;
         --*|-*)
             echo -e "\e[31mUnrecognized option: \e[1m$1\e[0m" >&2
@@ -71,7 +82,11 @@ cleanup() {
     fi
 
     if [ -n "$tmp_dir" ]; then
-        rm -rf "$tmp_dir"
+        if [ -n "$keep_temp_dir" ]; then
+            echo -e "Temp. dir. preserved: \e[1m$tmp_dir\e[22m"
+        else
+            rm -rf "$tmp_dir"
+        fi
     fi
 }
 trap cleanup exit
@@ -85,6 +100,7 @@ export PGHOST="$tmp_dir"
 export PGDATABASE="test_dump_restore"
 export PGUSER="wortel"
 export PGVERSION="15"
+OID_NOISE_DB_NAME="test_dump_restore_oid_noise"
 
 start_pg_cluster() {
     "$PG_BIN_DIR/initdb" \
@@ -110,8 +126,9 @@ mkdir -p $(dirname "$out_file")
 echo "-- createdb" > "$out_file"
 $PG_BIN_DIR/createdb || exit 5
 
-echo "-- psql -f '$psql_script_file' -v 'extension_name=$extension_name' -v 'test_stage=pre-dump'" >> "$out_file"
+echo "-- psql -X -f '$psql_script_file' -v 'extension_name=$extension_name' -v 'test_stage=pre-dump'" >> "$out_file"
 $PG_BIN_DIR/psql \
+    --no-psqlrc \
     -f "$psql_script_file" \
     -v "extension_name=$extension_name" \
     -v "test_stage=pre-dump" \
@@ -130,17 +147,32 @@ rm -r "$PGDATA"
 
 start_pg_cluster
 
-echo "-- psql postgres -c '\\set ON_ERROR_STOP' -f <roles_dump_file>" >> "$out_file"
-$PG_BIN_DIR/psql postgres -c '\set ON_ERROR_STOP' \
+echo "-- psql postgres -X -c '\\set ON_ERROR_STOP' -f <roles_dump_file>" >> "$out_file"
+$PG_BIN_DIR/psql postgres \
+    --no-psqlrc \
+    -c '\set ON_ERROR_STOP' \
     -f <(grep -v "CREATE ROLE $PGUSER" "$roles_dump_file") \
     >> "$out_file" 2>&1 \
     || exit 5
 
-echo "-- pg_restore --create --dbname postgres <dump_file>" >> "$out_file"
-$PG_BIN_DIR/pg_restore --create --dbname postgres "$dump_file" >> "$out_file" 2>&1 || exit 5
+echo "-- createdb '$OID_NOISE_DB_NAME'" >> "$out_file"
+$PG_BIN_DIR/createdb "$OID_NOISE_DB_NAME" >> "$out_file" 2>&1 || exit 5
 
-echo "-- psql -f '$psql_script_file' -v 'extension_name=$extension_name' -v 'test_stage=post-restore'" >> "$out_file"
+echo "-- psql -X -f '$psql_script_file' -v 'extension_name=$extension_name' -v 'test_stage=pre-restore'" >> "$out_file"
 $PG_BIN_DIR/psql \
+    --no-psqlrc \
+    -f "$psql_script_file" \
+    -v "extension_name=$extension_name" \
+    -v "test_stage=pre-restore" \
+    "$OID_NOISE_DB_NAME" \
+    >> "$out_file" 2>&1 || exit 5
+
+echo "-- pg_restore --create --dbname postgres <dump_file>" >> "$out_file"
+$PG_BIN_DIR/pg_restore --exit-on-error --create --dbname postgres "$dump_file" >> "$out_file" 2>&1 || exit 5
+
+echo "-- psql -X -f '$psql_script_file' -v 'extension_name=$extension_name' -v 'test_stage=post-restore'" >> "$out_file"
+$PG_BIN_DIR/psql \
+    --no-psqlrc \
     -f "$psql_script_file" \
     -v "extension_name=$extension_name" \
     -v "test_stage=post-restore" \

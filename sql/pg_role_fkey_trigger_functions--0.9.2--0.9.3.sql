@@ -1,41 +1,21 @@
 -- complain if script is sourced in `psql`, rather than via `CREATE EXTENSION`
 \echo Use "CREATE EXTENSION pg_role_fkey_trigger_functions" to load this file. \quit
 
---------------------------------------------------------------------------------------------------------------
 
--- Fix foreign_key_violation error message to use `_new_role` instead of `_role_fkey_column`.
-create or replace function enforce_fkey_to_db_role()
-    returns trigger
-    language plpgsql
-    as $$
-declare
-    _role_fkey_column name;
-    _new_role name;
-begin
-    assert tg_when = 'AFTER';
-    assert tg_level = 'ROW';
-    assert tg_op in ('INSERT', 'UPDATE');
-    assert tg_nargs = 1,
-        'You must supply the name of the row column in the CREATE TRIGGER definition.';
-
-    _role_fkey_column := tg_argv[0];
-
-    execute 'SELECT $1.' || quote_ident(_role_fkey_column) into _new_role using NEW;
-
-    if not exists (select from pg_catalog.pg_roles where pg_roles.rolname = _new_role) then
-        raise foreign_key_violation
-            using message = 'Unknown database role: ' || _new_role;
-        return null;
-    end if;
-
-    return NEW;
-end;
-$$;
-
---------------------------------------------------------------------------------------------------------------
-
--- Test the specific error message raised by `enforce_fkey_to_db_role()`.
--- Also, the tests previously didn't fail if the triggers failed to raise an error.
+/**
+ * CHANGELOG.md:
+ *
+ * - Prior to this release, when the `enforce_fkey_to_db_role()` trigger
+ *   function failed to produce an error, this would slip through the
+ *   `test__pg_role_fkey_trigger_functions()` procedure unnoticed.
+ *
+ *   + Now, the `test__pg_role_fkey_trigger_functions()` procedure _does_ fail
+ *     if the test trigger based on `enforce_fkey_to_db_role()` fails to raise
+ *     a `foreign_key_violation`.
+ *
+ *   + Also, the test procedure now tests the specific error message raised by
+ *     `enforce_fkey_to_db_role()`.
+ */
 create or replace procedure test__pg_role_fkey_trigger_functions()
     set search_path from current
     set plpgsql.check_asserts to true
@@ -125,4 +105,38 @@ exception
 end;
 $$;
 
---------------------------------------------------------------------------------------------------------------
+
+/**
+ * CHANGELOG.md:
+ *
+ *   + The `foreign_key_violation` error message produced by the
+ *     `enforce_fkey_to_db_role()` trigger function now correctly includes the
+ *     `_new_role` instead of the  `_role_fkey_column` value.
+ */
+create or replace function enforce_fkey_to_db_role()
+    returns trigger
+    language plpgsql
+    as $$
+declare
+    _role_fkey_column name;
+    _new_role name;
+begin
+    assert tg_when = 'AFTER';
+    assert tg_level = 'ROW';
+    assert tg_op in ('INSERT', 'UPDATE');
+    assert tg_nargs = 1,
+        'You must supply the name of the row column in the CREATE TRIGGER definition.';
+
+    _role_fkey_column := tg_argv[0];
+
+    execute 'SELECT $1.' || quote_ident(_role_fkey_column) into _new_role using NEW;
+
+    if not exists (select from pg_catalog.pg_roles where pg_roles.rolname = _new_role) then
+        raise foreign_key_violation
+            using message = 'Unknown database role: ' || _new_role;
+        return null;
+    end if;
+
+    return NEW;
+end;
+$$;

@@ -105,9 +105,9 @@ begin
             select
                 case
                     when pg_proc.prokind = 'p' then
-                        'CALL ' || pg_proc.oid::regprocedure::text
+                        'CALL ' || pg_proc.oid::regproc::text || '()'
                     else
-                        'PERFORM ' || pg_proc.oid::regprocedure::text
+                        'PERFORM ' || pg_proc.oid::regproc::text || '()'
                 end
             from
                 pg_depend

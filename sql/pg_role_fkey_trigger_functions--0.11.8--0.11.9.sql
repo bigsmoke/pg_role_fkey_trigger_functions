@@ -1,9 +1,13 @@
 -- Complain if script is sourced in `psql`, rather than via `CREATE EXTENSION`.
 \echo Use "CREATE EXTENSION pg_role_fkey_trigger_functions" to load this file. \quit
 
---------------------------------------------------------------------------------------------------------------
 
--- Fix bug in `format()` specifiers in `RAISE`.
+/**
+ * CHANGELOG.md:
+ *
+ * - Some faulty `format()` specificiers in `RAISE` statements in the
+ *   `grant_role_in_column1_to_role_in_column2()` trigger function were fixed.
+ */
 create or replace function grant_role_in_column1_to_role_in_column2()
     returns trigger
     security definer
@@ -122,5 +126,3 @@ begin
     return NEW;
 end;
 $$;
-
---------------------------------------------------------------------------------------------------------------

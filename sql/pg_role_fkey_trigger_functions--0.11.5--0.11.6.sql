@@ -1,8 +1,13 @@
 -- Complain if script is sourced in `psql`, rather than via `CREATE EXTENSION`.
 \echo Use "CREATE EXTENSION pg_role_fkey_trigger_functions" to load this file. \quit
 
---------------------------------------------------------------------------------------------------------------
 
+/**
+ * CHANGELOG.md:
+ *
+ * - The `revoke_role_in_column1_from_role_in_column2()` trigger function
+ *   got much improved custom assertion exception strings.
+ */
 create or replace function revoke_role_in_column1_from_role_in_column2()
     returns trigger
     security definer
@@ -58,5 +63,3 @@ begin
     return NEW;
 end;
 $$;
-
---------------------------------------------------------------------------------------------------------------

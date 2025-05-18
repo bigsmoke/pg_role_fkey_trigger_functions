@@ -1,9 +1,14 @@
 -- complain if script is sourced in `psql`, rather than via `CREATE EXTENSION`
 \echo Use "CREATE EXTENSION pg_role_fkey_trigger_functions" to load this file. \quit
 
---------------------------------------------------------------------------------------------------------------
 
--- CHANGE: Also support ON UPDATE and in that case revoke the old
+/**
+ * CHANGELOG.md:
+ *
+ * - The `grant_role_in_column1_to_role_in_column2()` trigger function now only
+ *   does the grant if the role in column 1 isn't already granted to the role
+ *   in column 2.
+ */
 create or replace function grant_role_in_column1_to_role_in_column2()
     returns trigger
     security definer
@@ -82,9 +87,13 @@ create trigger grant_owner_impersonation_to_account_manager
 ```
 $markdown$;
 
---------------------------------------------------------------------------------------------------------------
 
--- CHANGE: Entirely new function.
+/**
+ * CHANGELOG.md:
+ *
+ * - A new trigger function—`revoke_role_in_column1_from_role_in_column2()`—was
+ *   added, as a counterpart to `grant_role_in_column1_to_role_in_column2()`.
+ */
 create function revoke_role_in_column1_from_role_in_column2()
     returns trigger
     security definer
@@ -126,11 +135,17 @@ $markdown$Use this trigger function, in concert with `grant_role_in_column1_to_r
 **Beware:** This function cannot read your mind and thus will not be aware if there is still another relation that depends on the role in column 2 remaining a member of the role in column 1. As always: use at your own peril.
 $markdown$;
 
---------------------------------------------------------------------------------------------------------------
 
--- CHANGE: Include tests for new revoke_role_in_column1_from_role_in_column2() function.
--- CHANGE: More and better assertions.
--- CHANGE: More and better assertion failure messages.
+/**
+ * CHANGELOG.md:
+ *
+ * - The `test__pg_role_fkey_trigger_functions()` procedure was extended to:
+ *
+ *   + include tests for the new `revoke_role_in_column1_from_role_in_column2()`
+ *     function;
+ *   + perform more and better assertions; as well as
+ *   + have more and more explicit failure messages.
+ */
 create or replace procedure test__pg_role_fkey_trigger_functions()
     set search_path from current
     set plpgsql.check_asserts to true
@@ -243,5 +258,3 @@ exception
     when transaction_rollback then
 end;
 $$;
-
---------------------------------------------------------------------------------------------------------------

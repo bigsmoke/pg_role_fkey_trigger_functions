@@ -1,9 +1,14 @@
 -- complain if script is sourced in `psql`, rather than via `CREATE EXTENSION`
 \echo Use "CREATE EXTENSION pg_role_fkey_trigger_functions" to load this file. \quit
 
---------------------------------------------------------------------------------------------------------------
 
--- CHANGE: Instead of guessing what to do, refuse to do certain work and be very verbal about it.
+/**
+ * CHANGELOG.md:
+ *
+ * - Instead of guessing what to do in the case of doubt, the
+ *   `grant_role_in_column1_to_role_in_column2()` trigger function now refuses
+ *   to do certain work and has become very verbal about it.
+ */
 create or replace function grant_role_in_column1_to_role_in_column2()
     returns trigger
     security definer
@@ -167,12 +172,20 @@ create trigger grant_owner_impersonation_to_account_manager
 See the `test__pg_role_fkey_trigger_functions()` procedure for a more extensive example.
 $markdown$;
 
---------------------------------------------------------------------------------------------------------------
 
--- Look at old and new roles instead of just the old. From there, go ahead and REVOKE if a change is detected.
--- We no longer check if both OLD roles still exist and whether the grantee is still a member of the role in
--- column 1, because we want to make sure that devs get an early warning when they sequence these trigger
--- functions incorrectly.
+/**
+ * CHANGELOG.md:
+ *
+ * - `revoke_role_in_column1_from_role_in_column2()` now looks at old _and_ new
+ *   roles instead of just the old.  From the basis of that, it then goes ahead
+ *   and `REVOKE`s if a change is detected.
+ *
+ * - `revoke_role_in_column1_from_role_in_column2()` no longer checks if both
+ *   `OLD` roles still exist and whether the grantee is still a member of the
+ *   role in column 1, because we want to make sure that devs (building on this
+ *   extension) get an early warning when they sequence these trigger functions
+ *   incorrectly.
+ */
 create or replace function revoke_role_in_column1_from_role_in_column2()
     returns trigger
     security definer
@@ -228,7 +241,6 @@ begin
 end;
 $$;
 
---------------------------------------------------------------------------------------------------------------
 
 create or replace procedure test__pg_role_fkey_trigger_functions()
     set search_path from current
@@ -357,5 +369,3 @@ exception
     when transaction_rollback then
 end;
 $$;
-
---------------------------------------------------------------------------------------------------------------

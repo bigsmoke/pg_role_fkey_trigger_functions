@@ -1,16 +1,20 @@
 \set ECHO none
 NOTICE:  CREATE EXTENSION pg_role_fkey_trigger_functions WITH VERSION '0.11.7' CASCADE
-NOTICE:  ALTER EXTENSION pg_role_fkey_trigger_functions UPDATE TO '0.11.9'
+NOTICE:  ALTER EXTENSION pg_role_fkey_trigger_functions UPDATE TO '1.0.0'
 NOTICE:  CALL test__pg_role_fkey_trigger_functions()
 NOTICE:  DROP EXTENSION pg_role_fkey_trigger_functions CASCADE
 NOTICE:  CREATE EXTENSION pg_role_fkey_trigger_functions WITH VERSION '0.11.8' CASCADE
-NOTICE:  ALTER EXTENSION pg_role_fkey_trigger_functions UPDATE TO '0.11.9'
+NOTICE:  ALTER EXTENSION pg_role_fkey_trigger_functions UPDATE TO '1.0.0'
 NOTICE:  CALL test__pg_role_fkey_trigger_functions()
 NOTICE:  DROP EXTENSION pg_role_fkey_trigger_functions CASCADE
 NOTICE:  CREATE EXTENSION pg_role_fkey_trigger_functions WITH VERSION '0.11.9' CASCADE
+NOTICE:  ALTER EXTENSION pg_role_fkey_trigger_functions UPDATE TO '1.0.0'
 NOTICE:  CALL test__pg_role_fkey_trigger_functions()
 NOTICE:  DROP EXTENSION pg_role_fkey_trigger_functions CASCADE
 NOTICE:  CREATE EXTENSION pg_role_fkey_trigger_functions WITH VERSION '0.9.0' CASCADE
-NOTICE:  ALTER EXTENSION pg_role_fkey_trigger_functions UPDATE TO '0.11.9'
+NOTICE:  ALTER EXTENSION pg_role_fkey_trigger_functions UPDATE TO '1.0.0'
+NOTICE:  CALL test__pg_role_fkey_trigger_functions()
+NOTICE:  DROP EXTENSION pg_role_fkey_trigger_functions CASCADE
+NOTICE:  CREATE EXTENSION pg_role_fkey_trigger_functions WITH VERSION '1.0.0' CASCADE
 NOTICE:  CALL test__pg_role_fkey_trigger_functions()
 NOTICE:  DROP EXTENSION pg_role_fkey_trigger_functions CASCADE

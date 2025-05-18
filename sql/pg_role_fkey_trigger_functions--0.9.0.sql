@@ -3,9 +3,7 @@
 
 --------------------------------------------------------------------------------------------------------------
 
-comment
-    on extension pg_role_fkey_trigger_functions
-    is $markdown$
+comment on extension pg_role_fkey_trigger_functions is $markdown$
 The `pg_role_fkey_trigger_functions` PostgreSQL extension offers a
 bunch of trigger functions to help establish and/or maintain referential
 integrity for columns that reference PostgreSQL `ROLE` `NAME`s.
@@ -39,7 +37,7 @@ $markdown$;
 
 --------------------------------------------------------------------------------------------------------------
 
-create or replace function pg_role_fkey_trigger_functions_readme()
+create function pg_role_fkey_trigger_functions_readme()
     returns text
     volatile
     set search_path from current

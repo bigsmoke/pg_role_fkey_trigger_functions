@@ -1,10 +1,14 @@
 -- complain if script is sourced in `psql`, rather than via `CREATE EXTENSION`
 \echo Use "CREATE EXTENSION pg_role_fkey_trigger_functions" to load this file. \quit
 
---------------------------------------------------------------------------------------------------------------
 
--- Pretend to start with a new database (with the roles still existing).  (This is useful in development
--- and acceptance environments.)
+/**
+ * CHANGELOG.md:
+ *
+ * - The `test_dump_restore__maintain_referenced_role()` now pretends to start
+ *   with a new database (with the roles still existing), which is useful in
+ *   development and acceptance environments.
+ */
 create or replace procedure test_dump_restore__maintain_referenced_role(test_stage$ text)
     set search_path from current
     set plpgsql.check_asserts to true
@@ -73,9 +77,15 @@ begin
 end;
 $$;
 
---------------------------------------------------------------------------------------------------------------
 
--- Be okay with the fact when the role already exists, as long as it is sort of owned by the trigger.
+/**
+ * CHANGELOG.md:
+ *
+ * - The `maintain_referenced_role()` is now okay with pre-existing roles, as
+ *   long as these roles are sort of owned by the trigger, according to the
+ *   `pg_role_fkey_trigger_functions.role_is_managed` and
+ *   `pg_role_fkey_trigger_functions.role_fkey_col_path` settings for that role.
+ */
 create or replace function maintain_referenced_role()
     returns trigger
     security definer
@@ -193,9 +203,14 @@ begin
 end;
 $$;
 
---------------------------------------------------------------------------------------------------------------
 
--- Also include `pg_readme` dependencies when required.
+/**
+ * CHANGELOG.md:
+ *
+ * - The `pg_role_fkey_trigger_functions_readme()` generation function now not
+ *   only temporarily installs the `pg_readme` extension when necessary, but
+ *   also `pg_readme` its dependencies.
+ */
 create or replace function pg_role_fkey_trigger_functions_readme()
     returns text
     volatile
@@ -238,5 +253,3 @@ exception
         return _readme;
 end;
 $plpgsql$;
-
---------------------------------------------------------------------------------------------------------------

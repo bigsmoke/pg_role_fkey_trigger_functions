@@ -1,10 +1,14 @@
 -- complain if script is sourced in `psql`, rather than via `CREATE EXTENSION`
 \echo Use "CREATE EXTENSION pg_role_fkey_trigger_functions" to load this file. \quit
 
---------------------------------------------------------------------------------------------------------------
 
--- Set search_path to also find `pg_extension_readme()` if the `pg_readme` extension was already installed
--- (outside of the function's own `search_path`) prior to running this function.
+/**
+ * CHANGELOG.md:
+ *
+ * - The `pg_extension_readme()` function can now also be found if the
+ *   `pg_readme` extension was already installed outside of the
+ *   `pg_role_fkey_trigger_functions` extension its `search_path`.
+ */
 create or replace function pg_role_fkey_trigger_functions_readme()
     returns text
     volatile
@@ -48,8 +52,22 @@ exception
 end;
 $plpgsql$;
 
+/**
+ * CHANGELOG.md:
+ *
+ * - The `comment on function pg_role_fkey_trigger_functions_readme()` synopsis
+ *   sentence has now been squeezed entirely into the first line of the
+ *   `comment`, because some tools (like PostgREST) treat only the first line of
+ *   `comment`s as the synopsis.
+ */
 comment on function pg_role_fkey_trigger_functions_readme() is
     $markdown$This function utilizes the `pg_readme` extension to generate a thorough README for this extension, based on the `pg_catalog` and the `COMMENT` objects found therein.
 $markdown$;
 
---------------------------------------------------------------------------------------------------------------
+
+/**
+ * CHANGELOG.md:
+ *
+ * - The `README.md` was regenerated with the latest (0.5.6) version of
+ *   `pg_readme`.
+ */

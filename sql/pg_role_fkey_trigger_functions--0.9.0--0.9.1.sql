@@ -1,10 +1,19 @@
 -- complain if script is sourced in `psql`, rather than via `CREATE EXTENSION`
 \echo Use "CREATE EXTENSION pg_role_fkey_trigger_functions" to load this file. \quit
 
---------------------------------------------------------------------------------------------------------------
 
--- This was originally an unconditional `ALTER DATABASE` statement, which disregarded the facts that the
--- `.control` file of this extension states that this extension should be installable for non-superusers.
+/**
+ * CHANGELOG.md:
+ *
+ * - Originally, there was an unconditional `ALTER DATABASE` statement, which
+ *   disregarded the fact that the `.control` file of this extension states
+ *   that this extension should be installable for non-superusers.  To fix
+ *   this, the `ALTER DATABASE` command is now only performed when this
+ *   extension is being installed by a role with superuser privilege.
+ *   ~
+ *   (The `ALTER DATABASE … SET …` command was/is not terribly important; its
+ *   sole purpose is for the future use of cross-README links by `pg_readme`.)
+ */
 do $$
 declare
     _ddl_cmd_to_set_pg_role_fkey_trigger_functions_url text;
@@ -32,5 +41,3 @@ exception
                 || _ddl_cmd_to_set_pg_role_fkey_trigger_functions_url || ';';
 end;
 $$;
-
---------------------------------------------------------------------------------------------------------------

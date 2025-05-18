@@ -1,9 +1,17 @@
 -- complain if script is sourced in `psql`, rather than via `CREATE EXTENSION`
 \echo Use "CREATE EXTENSION pg_role_fkey_trigger_functions" to load this file. \quit
 
---------------------------------------------------------------------------------------------------------------
 
-create or replace function pg_role_fkey_trigger_functions_meta_pgxn()
+/**
+ * CHANGELOG.md:
+ *
+ * - `pg_role_fkey_trigger_functions` is now also available through the
+ *   PGXN: https://pgxn.org/dist/pg_role_fkey_trigger_functions/
+ *
+ *   + The PGXN `META.json` file is automatically generated, simply by taking
+ *     the output of the `pg_role_fkey_trigger_functions_meta_pgxn()` function.
+ */
+create function pg_role_fkey_trigger_functions_meta_pgxn()
     returns jsonb
     stable
     language sql
@@ -95,11 +103,7 @@ create or replace function pg_role_fkey_trigger_functions_meta_pgxn()
         ]
     );
 
---------------------------------------------------------------------------------------------------------------
-
-comment
-    on function pg_role_fkey_trigger_functions_meta_pgxn()
-    is $markdown$
+comment on function pg_role_fkey_trigger_functions_meta_pgxn() is $md$
 Returns the JSON meta data that has to go into the `META.json` file needed for
 [PGXN—PostgreSQL Extension Network](https://pgxn.org/) packages.
 
@@ -109,13 +113,20 @@ refresh the meta file with the function's current output, including the
 
 And indeed, `pg_role_fkey_trigger_functions` can be found on PGXN:
 https://pgxn.org/dist/pg_role_fkey_trigger_functions/
-$markdown$;
+$md$;
 
---------------------------------------------------------------------------------------------------------------
 
-comment
-    on extension pg_role_fkey_trigger_functions
-    is $markdown$
+/**
+ * CHANGELOG.md:
+ *
+ * - The `README.md` preamble (base on `comment on extension`) has been updated
+ *   to:
+ *
+ *   + finish unfinished bullet point in intro;
+ *   + add a link to the reference; and
+ *   + to promote flashmq.com in a new “Origin” section.
+ */
+comment on extension pg_role_fkey_trigger_functions is $markdown$
 The `pg_role_fkey_trigger_functions` PostgreSQL extension offers a
 bunch of trigger functions to help establish and/or maintain referential
 integrity for columns that reference PostgreSQL `ROLE` `NAME`s.
@@ -166,8 +177,14 @@ And public release turns out to improve discipline:
 <?pg-readme-colophon?>
 $markdown$;
 
---------------------------------------------------------------------------------------------------------------
 
+/**
+ * CHANGELOG.md:
+ *
+ * - If `pg_role_fkey_trigger_functions_readme()` finds the `pg_readme`
+ *   extension not yet installed, instead of installing a pinned `pg_readme`
+ *   version (0.1.3), it now installs the latest `pg_readme` version.
+ */
 create or replace function pg_role_fkey_trigger_functions_readme()
     returns text
     volatile
@@ -190,18 +207,22 @@ exception
 end;
 $plpgsql$;
 
-comment
-    on function pg_role_fkey_trigger_functions_readme()
-    is $markdown$
+comment on function pg_role_fkey_trigger_functions_readme() is $md$
 This function utilizes the `pg_readme` extension to generate a thorough README
 for this extension, based on the `pg_catalog` and the `COMMENT` objects found
 therein.
+$md$;
 
-$markdown$;
 
---------------------------------------------------------------------------------------------------------------
-
+/**
+ * CHANGELOG.md:
+ *
+ * - The `test__pg_role_fkey_trigger_functions()` procedure body is now
+ *   explicitly marked to be included in the object reference in the README
+ *   (through the `pg_readme.include_this_routine_definition` setting on
+ *   the procedure), even though this is redundant because the
+ *   `pg_role_fkey_trigger_functions_readme()` function has
+ *   `set pg_readme.include_routine_definitions_like to '{test__%}'.
+ */
 alter procedure test__pg_role_fkey_trigger_functions()
     set pg_readme.include_this_routine_definition to true;
-
---------------------------------------------------------------------------------------------------------------

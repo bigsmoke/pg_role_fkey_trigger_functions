@@ -1,9 +1,12 @@
 -- complain if script is sourced in `psql`, rather than via `CREATE EXTENSION`
 \echo Use "CREATE EXTENSION pg_role_fkey_trigger_functions" to load this file. \quit
 
---------------------------------------------------------------------------------------------------------------
 
--- First pg_dump/pg_restore test procedure for this extension.
+/*
+ * CHANGELOG.md:
+ *
+ * - A `pg_dump`/`pg_restore` test procedure was added.
+ */
 create procedure test_dump_restore__maintain_referenced_role(test_stage$ text)
     set search_path from current
     set plpgsql.check_asserts to true
@@ -54,10 +57,16 @@ begin
 end;
 $$;
 
---------------------------------------------------------------------------------------------------------------
 
--- Crash more informatively when role already exists.
--- Return `OLD` instead of `NOW` on `DELETE`.
+/**
+ * CHANGELOG.md:
+ *
+ * - `maintain_referenced_role()` now correctly returns `OLD` instead of `NEW`
+ *   on delete.
+ *
+ * - `maintain_referenced_role()` has been changed to crash more informatively
+ *   when, unexpectedly, the role already exists.
+ */
 create or replace function maintain_referenced_role()
     returns trigger
     security definer
@@ -159,9 +168,13 @@ delete from test__tbl
 ```
 $markdown$;
 
---------------------------------------------------------------------------------------------------------------
 
--- Add test for trying to trigger creation of pre-existing role.
+/**
+ * CHANGELOG.md:
+ *
+ * - Such faulty creation of pre-existing roles is now also tested as part of
+ *   the `test__pg_role_fkey_trigger_functions()` procedure.
+ */
 create or replace procedure test__pg_role_fkey_trigger_functions()
     set search_path from current
     set plpgsql.check_asserts to true
@@ -302,5 +315,3 @@ exception
     when transaction_rollback then
 end;
 $$;
-
---------------------------------------------------------------------------------------------------------------
