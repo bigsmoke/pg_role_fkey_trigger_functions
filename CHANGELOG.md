@@ -18,12 +18,42 @@ up-to-date `CHANGELOG.md` file can be generated).
 
 ---
 
-## [1.0.1] – unreleased
+## [1.0.2] – 2025-05-19
+
+[1.0.2]: https://github.com/bigsmoke/pg_role_fkey_trigger_functions/compare/v1.0.1…
+
+- Contrary to unpopular belief, the previous bugfix release only fixed
+  the then-previous `CHANGELOG.md` entry.  This time over, the extension
+  author started out by accepting that releasing a new version had become
+  to complicated, involving too many steps, some of which were ridiculous:
+
+  1. committing with a `CHANGELOG.md` without a release data, to then
+  2. make a release tag for the newly to be released version,
+  3. remaking the `CHANGENLOG.md`,
+  4. amending the last commit,
+  5. deleting the tag for the commit that now no longer exists, and
+  6. remaking the correct tag.
+
+  All this while the awesome `bin/sql-to-changelog.md` script already had
+  the ability to specify the release data for any of the `.sql` scripts it
+  is passed on the command-line.
+
+  This ability is now used to power a new `make tag_default_version` target,
+  the implementation of which is pretty hacky, but aren't `Makefile`s nearly
+  always a bit so?
+
+- A placeholder was added to the `README.md` for Rowan to remind himself
+  the document the steps involved in the development process of new
+  versions.
+
+## [1.0.1] – 2025-05-18
 
 [1.0.1]: https://github.com/bigsmoke/pg_role_fkey_trigger_functions/compare/v1.0.0…v1.0.1
 
 - This bugfix release only fixes the `CHANGELOG.md`, because, actually,
-  version 1.0.0 _was_ release when version 1.0.0 was released.
+  version 1.0.0 _was_ released when version 1.0.0 was released.  [Except
+  that then this release repeated the exact same mistake for the release
+  that of _this_ version. 🤦]
 
 ## [1.0.0] – 2025-05-18
 

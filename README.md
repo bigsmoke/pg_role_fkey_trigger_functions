@@ -1,11 +1,13 @@
 ---
 pg_extension_name: pg_role_fkey_trigger_functions
-pg_extension_version: 1.0.1
-pg_readme_generated_at: 2025-05-18 13:27:38.24398+01
+pg_extension_version: 1.0.2
+pg_readme_generated_at: 2025-05-19 10:30:48.144833+01
 pg_readme_version: 0.7.0
 ---
 
 # The `pg_role_fkey_trigger_functions` extension for PostgreSQL
+
+## Overview of `pg_role_fkey_trigger_functions` functionality
 
 The `pg_role_fkey_trigger_functions` PostgreSQL extension offers a
 bunch of trigger functions to help establish and/or maintain referential
@@ -164,6 +166,10 @@ And public release turns out to improve discipline:
   is to be the third generation ecological gardener to grow the wild garden
   around his beautiful [family holiday home in the forest of Norg, Drenthe,
   the Netherlands](https://www.schuilplaats-norg.nl/) (available for rent!).
+
+## `pg_role_fkey_trigger_functions` development and release process
+
+[To be written.]
 
 ## Object reference
 
