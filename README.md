@@ -1,7 +1,7 @@
 ---
 pg_extension_name: pg_role_fkey_trigger_functions
-pg_extension_version: 1.0.2
-pg_readme_generated_at: 2025-05-19 10:30:48.144833+01
+pg_extension_version: 1.0.3
+pg_readme_generated_at: 2025-05-24 22:08:25.706566+01
 pg_readme_version: 0.7.0
 ---
 
@@ -303,6 +303,7 @@ Function attributes: `SECURITY DEFINER`
 Function-local settings:
 
   *  `SET pg_role_fkey_trigger_functions.search_path_template TO pg_catalog, "$extension_schema"`
+  *  `SET search_path TO pg_catalog, role_fkey_trigger_functions`
 
 #### Function: `maintain_referenced_role()`
 
@@ -355,6 +356,7 @@ Function attributes: `SECURITY DEFINER`
 Function-local settings:
 
   *  `SET pg_role_fkey_trigger_functions.search_path_template TO pg_catalog, "$extension_schema"`
+  *  `SET search_path TO pg_catalog, role_fkey_trigger_functions`
 
 #### Procedure: `pg_role_fkey_trigger_functions__alter_routines_to_reset_search_()`
 
@@ -445,6 +447,7 @@ Function attributes: `LEAKPROOF`
 Function-local settings:
 
   *  `SET pg_role_fkey_trigger_functions.search_path_template TO pg_catalog, "$extension_schema"`
+  *  `SET search_path TO pg_catalog, role_fkey_trigger_functions`
 
 #### Function: `pg_role_fkey_trigger_functions__trust_tables (regclass[], regrole, text)`
 
@@ -463,6 +466,7 @@ Function attributes: `LEAKPROOF`
 Function-local settings:
 
   *  `SET pg_role_fkey_trigger_functions.search_path_template TO pg_catalog, "$extension_schema"`
+  *  `SET search_path TO pg_catalog, role_fkey_trigger_functions`
 
 #### Function: `revoke_role_in_column1_from_role_in_column2()`
 
@@ -479,6 +483,7 @@ Function attributes: `SECURITY DEFINER`
 Function-local settings:
 
   *  `SET pg_role_fkey_trigger_functions.search_path_template TO pg_catalog, "$extension_schema"`
+  *  `SET search_path TO pg_catalog, role_fkey_trigger_functions`
 
 #### Procedure: `test_dump_restore__maintain_referenced_role (text)`
 
@@ -493,6 +498,7 @@ Procedure-local settings:
   *  `SET pg_role_fkey_trigger_functions.search_path_template TO pg_catalog, "$extension_schema"`
   *  `SET plpgsql.check_asserts TO true`
   *  `SET pg_readme.include_this_routine_definition TO true`
+  *  `SET search_path TO pg_catalog, role_fkey_trigger_functions`
 
 ```sql
 CREATE OR REPLACE PROCEDURE test_dump_restore__maintain_referenced_role(IN "test_stage$" text)
@@ -500,6 +506,7 @@ CREATE OR REPLACE PROCEDURE test_dump_restore__maintain_referenced_role(IN "test
  SET "pg_search_path_template" TO 'pg_catalog, "$extension_schema"'
  SET "plpgsql.check_asserts" TO 'true'
  SET "pg_readme.include_this_routine_definition" TO 'true'
+ SET search_path TO 'pg_catalog', 'role_fkey_trigger_functions'
 AS $procedure$
 declare
     _inserted_account_owner_role name;
@@ -572,6 +579,7 @@ Procedure-local settings:
   *  `SET pg_role_fkey_trigger_functions.search_path_template TO pg_catalog, "$extension_schema"`
   *  `SET plpgsql.check_asserts TO true`
   *  `SET pg_readme.include_this_routine_definition TO true`
+  *  `SET search_path TO pg_catalog, role_fkey_trigger_functions`
 
 ```sql
 CREATE OR REPLACE PROCEDURE test__pg_role_fkey_trigger_functions()
@@ -579,6 +587,7 @@ CREATE OR REPLACE PROCEDURE test__pg_role_fkey_trigger_functions()
  SET "pg_search_path_template" TO 'pg_catalog, "$extension_schema"'
  SET "plpgsql.check_asserts" TO 'true'
  SET "pg_readme.include_this_routine_definition" TO 'true'
+ SET search_path TO 'pg_catalog', 'role_fkey_trigger_functions'
 AS $procedure$
 declare
     _inserted_account_owner_role name;

@@ -18,9 +18,25 @@ up-to-date `CHANGELOG.md` file can be generated).
 
 ---
 
+## [1.0.3] – 2025-05-20
+
+[1.0.3]: https://github.com/bigsmoke/pg_role_fkey_trigger_functions/compare/v1.0.2…
+
+- In `pg_role_fkey_trigger_functions` 1.0.0 through 1.0.2, the
+  `search_path_template`s were not actually being applied, due to a buggy
+  `SELECT` query in the stored procedure that was supposed to do this work:
+  `pg_role_fkey_trigger_functions__alter_routines_to_reset_search_paths()`.
+  ~
+  This stored procedure has now been fixed.  However, the testing was done
+  manually, because there is as of yet no testing done outside of the
+  `search_path` scope in which this extension is installed, and how to do
+  this remains a difficult choice, which may involve ditching some of Rowan's
+  ideosyncratic testing methods for some of the same (Perl-based) stuff
+  that's also used to test Postgres' core and contrib stuff.
+
 ## [1.0.2] – 2025-05-19
 
-[1.0.2]: https://github.com/bigsmoke/pg_role_fkey_trigger_functions/compare/v1.0.1…
+[1.0.2]: https://github.com/bigsmoke/pg_role_fkey_trigger_functions/compare/v1.0.1…v1.0.2
 
 - Contrary to unpopular belief, the previous bugfix release only fixed
   the then-previous `CHANGELOG.md` entry.  This time over, the extension
