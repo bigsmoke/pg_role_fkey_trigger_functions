@@ -1,7 +1,7 @@
 ---
 pg_extension_name: pg_role_fkey_trigger_functions
-pg_extension_version: 1.0.3
-pg_readme_generated_at: 2025-05-24 22:08:25.706566+01
+pg_extension_version: 1.0.4
+pg_readme_generated_at: 2025-05-24 22:09:30.510279+01
 pg_readme_version: 0.7.0
 ---
 
@@ -128,7 +128,7 @@ function and the [`pg_role_fkey_trigger_functions__trusted_tables()`] function
 | Setting name                                           | Description                                                | Example value                       |
 | ------------------------------------------------------ | ---------------------------------------------------------- | ----------------------------------- |
 | `pg_role_fkey_trigger_functions.trusted_tables`        | See [_Secure `pg_role_fkey_trigger_functions` usage_].     | `'{schema_a.tbl_1,schema_a.tbl_2}'` |
-| `pg_role_fkey_trigger_functions.search_path_template`  | Template to (re)set the function's `search_path`.          | `'pg_catalog, "$extension_schema"'` |
+| `pg_role_fkey_trigger_functions.search_path_template`  | Template to (re)set the function's `search_path`.          | `'"$extension_schema", pg_catalog'` |
 | `pg_role_fkey_trigger_functions.readme_url`            | The (online) location to find this extension's `README.md` | `'http://example.com/README.html'`  |
 
 [_Secure `pg_role_fkey_trigger_functions` usage_]:
@@ -302,8 +302,8 @@ Function attributes: `SECURITY DEFINER`
 
 Function-local settings:
 
-  *  `SET pg_role_fkey_trigger_functions.search_path_template TO pg_catalog, "$extension_schema"`
-  *  `SET search_path TO pg_catalog, role_fkey_trigger_functions`
+  *  `SET pg_role_fkey_trigger_functions.search_path_template TO "$extension_schema", pg_catalog`
+  *  `SET search_path TO role_fkey_trigger_functions, pg_catalog`
 
 #### Function: `maintain_referenced_role()`
 
@@ -355,8 +355,8 @@ Function attributes: `SECURITY DEFINER`
 
 Function-local settings:
 
-  *  `SET pg_role_fkey_trigger_functions.search_path_template TO pg_catalog, "$extension_schema"`
-  *  `SET search_path TO pg_catalog, role_fkey_trigger_functions`
+  *  `SET pg_role_fkey_trigger_functions.search_path_template TO "$extension_schema", pg_catalog`
+  *  `SET search_path TO role_fkey_trigger_functions, pg_catalog`
 
 #### Procedure: `pg_role_fkey_trigger_functions__alter_routines_to_reset_search_()`
 
@@ -399,12 +399,15 @@ Function-local settings:
 
 Returns the array of relations (of type `regclass[]`) that are trusted by the `SECURITY DEFINER` trigger functions.
 
-This function has two arguments, both optional:
+This function has five arguments, all of them optional:
 
-| Arg.  | Type       | Default value            | Description                                            |
-| ----- | ---------- | -------------------------| ------------------------------------------------------ |
-| `$1`  | `regrole`  | `current_user::regrole`  | A role whose role-specific settings will be included.  |
-| `$2`  | `text`  `  | `current_database()`     | Whether to include database-wide settings or not.      |
+| Arg.  | Name                     | Type       | Default value            | Description                                                |
+| ----- | ------------------------ | ---------- | -------------------------| ---------------------------------------------------------- |
+| `$1`  | `role$`                  | `regrole`  | `current_user::regrole`  | A role whose role-specific settings will be included.      |
+| `$2`  | `db$`                    | `text`  `  | `current_database()`     | The database to look up settings for.                      |
+| `$3`  | `db_not_role_specific$`  | `boolean`  | `true`                   | Include DB-level settings not bound to a role.             |
+| `$4`  | `db_and_role_specific$`  | `boolean`  | `true`                   | Include settings which are specific to the role _and_ DB.  |
+| `$5`  | `role_not_db_specific$`  | `boolean`  | `true`                   | Include cluster-wide role settings.                        |
 
 See the [_Secure `pg_role_fkey_trigger_functions` usage_] section for details
 as to how and why this list is maintained.
@@ -426,10 +429,6 @@ Function return type: `regclass[]`
 
 Function attributes: `STABLE`, `LEAKPROOF`, `PARALLEL SAFE`
 
-Function-local settings:
-
-  *  `SET search_path TO pg_catalog`
-
 #### Function: `pg_role_fkey_trigger_functions__trust_table (regclass, regrole, text)`
 
 Function arguments:
@@ -446,8 +445,7 @@ Function attributes: `LEAKPROOF`
 
 Function-local settings:
 
-  *  `SET pg_role_fkey_trigger_functions.search_path_template TO pg_catalog, "$extension_schema"`
-  *  `SET search_path TO pg_catalog, role_fkey_trigger_functions`
+  *  `SET pg_role_fkey_trigger_functions.search_path TO pg_catalog`
 
 #### Function: `pg_role_fkey_trigger_functions__trust_tables (regclass[], regrole, text)`
 
@@ -465,8 +463,7 @@ Function attributes: `LEAKPROOF`
 
 Function-local settings:
 
-  *  `SET pg_role_fkey_trigger_functions.search_path_template TO pg_catalog, "$extension_schema"`
-  *  `SET search_path TO pg_catalog, role_fkey_trigger_functions`
+  *  `SET pg_role_fkey_trigger_functions.search_path TO pg_catalog`
 
 #### Function: `revoke_role_in_column1_from_role_in_column2()`
 
@@ -482,8 +479,8 @@ Function attributes: `SECURITY DEFINER`
 
 Function-local settings:
 
-  *  `SET pg_role_fkey_trigger_functions.search_path_template TO pg_catalog, "$extension_schema"`
-  *  `SET search_path TO pg_catalog, role_fkey_trigger_functions`
+  *  `SET pg_role_fkey_trigger_functions.search_path_template TO "$extension_schema", pg_catalog`
+  *  `SET search_path TO role_fkey_trigger_functions, pg_catalog`
 
 #### Procedure: `test_dump_restore__maintain_referenced_role (text)`
 
@@ -495,18 +492,18 @@ Procedure arguments:
 
 Procedure-local settings:
 
-  *  `SET pg_role_fkey_trigger_functions.search_path_template TO pg_catalog, "$extension_schema"`
+  *  `SET pg_role_fkey_trigger_functions.search_path_template TO "$extension_schema", pg_catalog`
   *  `SET plpgsql.check_asserts TO true`
   *  `SET pg_readme.include_this_routine_definition TO true`
-  *  `SET search_path TO pg_catalog, role_fkey_trigger_functions`
+  *  `SET search_path TO role_fkey_trigger_functions, pg_catalog`
 
 ```sql
 CREATE OR REPLACE PROCEDURE test_dump_restore__maintain_referenced_role(IN "test_stage$" text)
  LANGUAGE plpgsql
- SET "pg_search_path_template" TO 'pg_catalog, "$extension_schema"'
+ SET "pg_search_path_template" TO '"$extension_schema", pg_catalog'
  SET "plpgsql.check_asserts" TO 'true'
  SET "pg_readme.include_this_routine_definition" TO 'true'
- SET search_path TO 'pg_catalog', 'role_fkey_trigger_functions'
+ SET search_path TO 'role_fkey_trigger_functions', 'pg_catalog'
 AS $procedure$
 declare
     _inserted_account_owner_role name;
@@ -576,18 +573,18 @@ $procedure$
 
 Procedure-local settings:
 
-  *  `SET pg_role_fkey_trigger_functions.search_path_template TO pg_catalog, "$extension_schema"`
+  *  `SET pg_role_fkey_trigger_functions.search_path_template TO "$extension_schema", pg_catalog`
   *  `SET plpgsql.check_asserts TO true`
   *  `SET pg_readme.include_this_routine_definition TO true`
-  *  `SET search_path TO pg_catalog, role_fkey_trigger_functions`
+  *  `SET search_path TO role_fkey_trigger_functions, pg_catalog`
 
 ```sql
 CREATE OR REPLACE PROCEDURE test__pg_role_fkey_trigger_functions()
  LANGUAGE plpgsql
- SET "pg_search_path_template" TO 'pg_catalog, "$extension_schema"'
+ SET "pg_search_path_template" TO '"$extension_schema", pg_catalog'
  SET "plpgsql.check_asserts" TO 'true'
  SET "pg_readme.include_this_routine_definition" TO 'true'
- SET search_path TO 'pg_catalog', 'role_fkey_trigger_functions'
+ SET search_path TO 'role_fkey_trigger_functions', 'pg_catalog'
 AS $procedure$
 declare
     _inserted_account_owner_role name;
@@ -643,6 +640,7 @@ begin
 
     assert pg_role_fkey_trigger_functions__trusted_tables() = '{}'::regclass[];
     assert pg_role_fkey_trigger_functions__trusted_tables('test__trusting_role') = '{}'::regclass[];
+
     perform pg_role_fkey_trigger_functions__trust_table('test__customer', 'test__trusting_role');
     assert pg_role_fkey_trigger_functions__trusted_tables('test__trusting_role') = array[
         'test__customer'::regclass
@@ -667,6 +665,42 @@ begin
     end;
 
     perform pg_role_fkey_trigger_functions__trust_table('test__customer');
+
+    create table test__trusted_table_2 (dummy_col int);
+    create table test__trusted_table_3 (dummy_col int);
+    assert pg_role_fkey_trigger_functions__trust_tables(array[
+        'test__trusted_table_2'::regclass
+        ,'test__trusted_table_3'::regclass
+    ]) = array[
+        'test__customer',
+        'test__trusted_table_2',
+        'test__trusted_table_3'
+    ]::regclass[];
+    assert pg_role_fkey_trigger_functions__trusted_tables() = array[
+        'test__customer',
+        'test__trusted_table_2',
+        'test__trusted_table_3'
+    ]::regclass[], pg_role_fkey_trigger_functions__trusted_tables();
+    drop table test__trusted_table_2;
+    assert pg_role_fkey_trigger_functions__trusted_tables() = array[
+        'test__customer',
+        'test__trusted_table_3'
+    ]::regclass[], pg_role_fkey_trigger_functions__trusted_tables();
+    drop table test__trusted_table_3;
+    create table test__trusted_table_4 (dummy int);
+    assert pg_role_fkey_trigger_functions__trust_table('test__trusted_table_4') = array[
+        'test__customer',
+        'test__trusted_table_4'
+    ]::regclass[];
+    create table test__trusted_table_3 (dummy_col int);
+    assert pg_role_fkey_trigger_functions__trusted_tables('test__trusting_role') = array[
+        'test__customer',
+        'test__trusted_table_3',
+        'test__trusted_table_4'
+    ]::regclass[], format(
+        'The trusted table should have been remembered, got: %s'
+        ,pg_role_fkey_trigger_functions__trusted_tables('test__trusting_role')
+    );
 
     <<insert_invalid_role_reference>>
     declare

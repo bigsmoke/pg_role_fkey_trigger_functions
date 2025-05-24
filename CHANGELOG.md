@@ -18,9 +18,90 @@ up-to-date `CHANGELOG.md` file can be generated).
 
 ---
 
+## [1.0.4] – 2025-05-24
+
+[1.0.4]: https://github.com/bigsmoke/pg_role_fkey_trigger_functions/compare/v1.0.3…
+
+- It happens often that this extension's designer wants to repeat himself
+  rather than keep all his code as DRY as possible.  To make almost literal
+  repetitions across and within source files easier to manage, Rowan
+  created a new script: `wet`
+
+  `wet` too, like many helper scripts, will be copied between projects rather
+  than introduced as some external dependency.  This whole-file duplication,
+  however, will probably be managed by another, as of yet non-existent, tool:
+  `dry`.
+
+- The `pg_role_fkey_trigger_functions__trusted_tables()` function is no
+  longer used by its brethern functions—
+
+  1. `pg_role_fkey_trigger_functions__trust_table()` and
+  2. `pg_role_fkey_trigger_functions__trust_tables()`.
+  ~
+  The reason is threefold:
+
+  1. `pg_role_fkey_trigger_functions__trusted_tables()` was meant to _only_
+     return the `regclass`es of the relations that currently exist, whereas
+     its `*_trust_table()` and `*_trust_tables()` counterparts should retain
+     trusted tables, even if they do _not_ currently exist.
+
+  2. The fiddling with the `search_path` within the latter two functions was
+     still buggy and hacky anyway (though this could have been solved
+     differently, for example, by using the `pg_catalog` instead of the
+     `regclass::text` cast).
+
+  3. A fourth function could have been introduced, used by all 3 aforementioned
+     functions, but inter-function dependencies are a bit annoying extension
+     design anyway, because it makes it more difficult for users/developers
+     to cherry-pick parts of an extension.
+
+- The `comment on function pg_role_fkey_trigger_functions__trusted_tables()`
+  was written for a signature that never existed in a released version—i.e.,
+  the argument types had already been changed into `(regrole, rext, bool,
+  bool, bool)` when the function was introduced in version 1.0.0 of the
+  extension).  This comment (and hence the `README.md`) is now up to date.
+
+- The `pg_role_fkey_trigger_functions__trust_table()` function was:
+
+  + freed from its `pg_role_fkey_trigger_functions__trusted_tables()`
+    dependency (as explicated more extensively above);
+
+  + fixed to always store fully qualified relation names, also when the
+    `current_schema()` is identical to the `$extension_schema`; and
+
+  + fixed to use the `to_regclass()` rather than the `text::regclass`, so
+    that the function doesn't crash when any of the trusted tables
+    can not be resolved into an `oid`/`regclass`.
+
+- Equally, the `pg_role_fkey_trigger_functions__trust_tables()` function was
+  also:
+
+  + freed from its `pg_role_fkey_trigger_functions__trusted_tables()`
+    dependency (as explicated more extensively above);
+
+  + fixed to always store fully qualified relation names, also when the
+    `current_schema()` is identical to the `$extension_schema`; and
+
+  + fixed to use the `to_regclass()` rather than the `text::regclass`, so
+    that the function doesn't crash when any of the trusted tables
+    can not be resolved into an `oid`/`regclass`.
+
+- The `test__pg_role_fkey_trigger_functions()` procedure now more explicitly
+  test the desired behaviours of the functions that were improved in this
+  release:
+
+  + `pg_role_fkey_trigger_functions__trusted_tables(regrole, text, bool, bool, bool)`,
+  + `pg_role_fkey_trigger_functions__trust_table(regclass, regrole, test)`, and
+  + `pg_role_fkey_trigger_functions__trust_tables(regclass[], regrole, text)`.
+
+- The elements in the `pg_role_fkey_trigger_functions.search_path_template`
+  settings were in the wrong order for all the functions for which this
+  setting was set.  This order has now been reversed, from `'pg_catalog,
+  "$extension_schema"'`, to `'"$extension_schema", pg_catalog'`.
+
 ## [1.0.3] – 2025-05-20
 
-[1.0.3]: https://github.com/bigsmoke/pg_role_fkey_trigger_functions/compare/v1.0.2…
+[1.0.3]: https://github.com/bigsmoke/pg_role_fkey_trigger_functions/compare/v1.0.2…v1.0.3
 
 - In `pg_role_fkey_trigger_functions` 1.0.0 through 1.0.2, the
   `search_path_template`s were not actually being applied, due to a buggy

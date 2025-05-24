@@ -1,0 +1,427 @@
+#!/bin/bash
+#
+# Copyright 2025 Rowan Rodrik van der Molen
+#
+# Released under the MIT license: https://opensource.org/license/mit
+
+SCRIPT_NAME=$(basename "$0")
+SCRIPT_VERSION="1.0.0"
+FRAGMENT_START_RE="<WET:([^>]+)>"
+FRAGMENT_CLOSE_RE="</WET:([^>]+)>"
+IGNORE_START_TAG="<WET:ignore>"
+IGNORE_END_TAG="</WET:ignore>"
+SINGLE_LINE_IGNORE_TAG="<WET:ignore/>"
+DEFAULT_LOG_LEVEL="info"
+DEFAULT_DEBUG_LEVEL=1
+
+
+b="\x1b[1m"
+B="\x1b[22m"
+u="\x1b[4m"
+U="\x1b[24m"
+
+usage() {
+    local sep="\x1b[2m|\x1b[22m"
+    local repeat="\x1b[2m…\x1b[22m"
+    local opt="\x1b[2m[\x1b[22m"
+    local Opt="\x1b[2m]\x1b[22m"
+    echo -e "${b}$SCRIPT_NAME – ${u}W${U}rite ${u}E${U}verything ${u}T${U}wice, because ${u}W${U}e ${u}E${U}njoy ${u}T${U}yping – v.$SCRIPT_VERSION${B}
+
+In many contexts, it's actually good to repeat yourself.  This script helps you
+to make sure that, if you do repeat yourself, each repetition is the same,
+except where the differences are marked to be specifically allowed.
+
+Usage:
+    ${b}$SCRIPT_NAME ${opt}${b}option${repeat}${Opt}${b} ${u}file${U}${repeat}${B}
+    ${b}$SCRIPT_NAME -h${B}$sep${b}--help
+    ${b}$SCRIPT_NAME -v${B}$sep${b}--version
+    ${b}$SCRIPT_NAME -s${B}$sep${b}--self-test${B}
+
+Options:
+    ${b}-h${B}${sep}${b}--help${B}
+        Show this help.
+
+    ${b}-l${B}${set}${b}--log-level info${sep}${b}error${sep}${b}debug${opt}${b}${u}debug_level${U}${Opt}${B}
+        Which level of log messages to show; default: ${b}$DEFAULT_LOG_LEVEL${B}
+        For ${b}--log-level debug${B}, a ${b}${u}debug_level${U}${B} between 1 and 5 may be suffixed.
+        The default ${b}${u}debug_level${U}${B} is ${b}$DEFAULT_DEBUG_LEVEL${B}.
+
+    ${b}-1${B}${sep}${b}--single-line-comment ${u}comment_prefix${U}${B}
+        The beginning characters of single-line comments in the given ${u}file${U}s.
+
+    ${b}-2${B}${sep}${b}--multi-line-comment ${u}comment_prefix${U} ${u}comment_suffix${U}${B}
+        The beginning and endings of multi-line comments in the given ${u}file${U}s.
+
+    ${b}-d${B}${sep}${b}--working-dir ${u}path${U}${B}
+
+    ${b}-k${B}$sep${b}--keep-working-dir on_failure${B}${sep}${b}always${B}${sep}${b}never${B}
+
+    ${b}-e${B}$sep${b}--file-extension ${u}.ext${U}
+        The file extension to assume and use for each fragment repetition file
+        in the fragment's subdir of the working directory.
+
+    ${b}-s${B}$sep${b}--self-test${B}
+
+    ${b}-v${B}$sep${b}--version${B}
+        Show version information.
+
+Exit codes:
+     \x1b[32m${b}0${B}\x1b[39m when all the fragments are in sync.
+     \x1b[31m${b}1${B}\x1b[39m never intentionally, because too many shell crashes can cause it.
+     \x1b[31m${b}2${B}\x1b[39m on option and argument errors and missing files.
+     \x1b[31m${b}4${B}\x1b[39m when fragments are demarcated incorrectly.
+     \x1b[31m${b}8${B}\x1b[39m when fragments have diverged.
+    \x1b[31m${b}12${B}\x1b[39m when fragments are demarcated incorrectly ${b}and${B} also fragments diverged.
+
+Example: \x1b[36mbash$\x1b[39m ${b}$SCRIPT_NAME -1 '\x1b[35m--\x1b[39m' - <<EOF${B}
+    \x1b[35m--<WET:${u}fragment-name${U}>\x1b[39m
+    code that you wish to repeat
+    code that you wish to repeat
+    \x1b[35m--<WET:ignore>\x1b[39m
+    line(s) that may deviate from the other repetitions of this fragment.
+    \x1b[35m--</WET:ignore>\x1b[39m
+    more code that you wish to retype
+    more code that you wish to retype
+    another line to ignore  \x1b[35m--<WET:ignore/>\x1b[39m
+    \x1b[35m--</WET:${u}fragment-name${U}>\x1b[39m
+${b}EOF${B}
+"
+}
+
+usage_error() {
+    1>&2 echo -e "\x1b[31mUsage error: $1\x1b[39m"
+    1>&2 echo
+    1>&2 usage
+    exit 2
+}
+
+log_info() {
+    [[ "$log_level" == 'info' || "$log_level" == debug* ]] || return
+    1>&2 echo -e "\x1b[42;30;1m$SCRIPT_NAME\x1b[22;32;49m $1\x1b[0m"
+}
+
+log_debug() {
+    [[ "$log_level" =~ debug* ]] || return
+
+    local msg_debug_level=$1
+    [[ "$msg_debug_level" -le "$debug_level" ]] || return
+
+    local msg="${b}$2${B} line ${b}$3${B}: $4"
+    1>&2 echo -e "\x1b[43;30;1m$SCRIPT_NAME\x1b[22;33;49m $msg\x1b[0m"
+}
+
+log_error() {
+    local msg
+    if [[ -n "$3" ]]; then
+        msg="${b}$1${B} line ${b}$2${B}: $3"
+    elif [[ -n "$2" ]]; then
+        msg="${b}$1${B}: $3"
+    elif [[ -n "$1" ]]; then
+        msg="$1"
+    fi
+    1>&2 echo -e "\x1b[41;30;1m$SCRIPT_NAME\x1b[22;31;49m $msg\x1b[0m"
+}
+
+
+self_test() {
+    1>&2 echo -e "Nope, not yet."
+    exit 10
+}
+
+
+log_level="$DEFAULT_LOG_LEVEL"
+debug_level="$DEFAULT_DEBUG_LEVEL"
+working_dir=
+keep_working_dir=
+single_line_comment_prefix=
+multi_line_comment_prefix=
+multi_line_comment_suffix=
+file_extension=
+files=()
+while [[ -n "$1" ]]; do
+    case "$1" in
+        -h|--help)
+            usage
+            exit 0
+            ;;
+        -v|--version)
+            echo "$SCRIPT_NAME $SCRIPT_VERSION"
+            exit 0
+            ;;
+        -s|--self-test)
+            self_test
+            exit 0
+            ;;
+        -l|--log-level)
+            [[ -n "$2" ]] || usage_error "Missing argument to ${b}$1${B} option."
+            log_level="$2"
+            if [[ "$log_level" =~ ^debug([1-5])$ ]]; then
+                debug_level="${BASH_REMATCH[1]}"
+            fi
+            shift
+            ;;
+        -1|--single-line-comment)
+            [[ -n "$2" ]] || usage_error "Missing argument to ${b}$1${B} option."
+            single_line_comment_prefix="$2"
+            shift
+            ;;
+        -2|--multi-line-comment)
+            [[ -n "$3" ]] || usage_error "The \x1b[1m$1\x1b[22m option requires 2 arguments."
+            multi_line_comment_prefix="$2"
+            multi_line_comment_suffix="$3"
+            shift 2
+            ;;
+        -d|--working-dir)
+            [[ -n "$2" ]] || usage_error "Missing argument to ${b}$1${B} option."
+            working_dir="$2"
+            shift
+            ;;
+        -k|--keep-working-dir)
+            [[ -n "$2" ]] || usage_error "Missing argument to ${b}$1${B} option."
+            keep_working_dir="$2"
+            shift
+            ;;
+        -e|--file-extension)
+            [[ -n "$2" ]] || usage_error "Missing argument to ${b}$1${B} option."
+            file_extension="$2"
+            shift
+            ;;
+        -*)
+            usage_error "Unknown option: \x1b[1m$1\x1b[22m"
+            ;;
+        *)
+            files+=("$1")
+            ;;
+    esac
+    shift
+done
+
+[[ ${#files[@]} -gt 0 ]] || usage_error "You need to specify at least one ${u}file{$u} argument."
+for file in "${files[@]}"; do
+    if [[ ! -f "$file" ]]; then
+        usage_error "File ${u}$file${U} doesn't exist."
+    fi
+done
+
+if [[ -z "$single_line_comment_prefix" && -z "$multi_line_comment_prefix" ]]; then
+    usage_error "Your need at least one of the ${b}--single-line-comment${B} or ${b}--multi-line-comment${B} options."
+fi
+single_line_comment_re="$single_line_comment_prefix"
+
+if [[ -n "$single_line_comment_prefix" ]]; then
+    ignored_line_marker="$single_line_comment_prefix<WET:ignored lines='{lines}'/>"
+else
+    ignored_line_marker="$multi_line_comment_prefix<WET:ignored lines='{lines}'/>$multi_line_comment_suffix"
+fi
+
+if [[ -z "$working_dir" ]]; then
+    working_dir="$(mktemp -d -t wet-fragments.XXXXXXXXXX)"
+    log_info "Generated working dir: ${u}$working_dir${U}"
+    implicitly_keep_working_dir=never
+elif [[ ! -d "$working_dir" ]]; then
+    mkdir -p "$working_dir"
+    log_info "Created working dir: ${u}$working_dir${U}"
+    implicitly_keep_working_dir=never
+else
+    log_info "Working dir ${u}$working_dir${U} exists."
+    implicitly_keep_working_dir=always
+fi
+
+if [[ -z "$file_extension" ]]; then
+    file_extension=$(echo "${files[0]}" | sed -E 's/^.*(\.[^.]+)$/\1/')
+    log_info "Assumed ${b}--file-extension ${u}$file_extension${U}${B} from first file argument: ${u}${files[0]}${U}"
+    if [[ -z "$file_extension" ]]; then
+        usage_error "Couldn't determine file extension; please supply ${b}--file-extension ${u}.ext${U}${B} option."
+    fi
+fi
+
+if [[ -z "$keep_working_dir" && "$implicitly_keep_working_dir" ]]; then
+    keep_working_dir="$implicitly_keep_working_dir"
+    log_info "Implicitly set option: ${b}--keep-working-dir $keep_working_dir${B}"
+fi
+
+
+# Let's loop through all the files to locate all the fragments.
+declare -A fragment_repetitions
+for file in "${files[@]}"; do
+    line_no=0
+    comment_start_line_no=
+    commen_end_line_no=
+    fragment_start_line_no=
+    fragment_end_line_no=
+    fragment_name=
+    fragment_dir=
+    fragment_lines=()
+    ignore_start_line_no=
+    ignore_end_line_no=
+    while IFS= read -r line; do
+        line_no=$((line_no + 1))
+
+        # The first step in each iteration is to determine whether this line is (part of) a comment or not.
+        if [[ -n "$multi_line_comment_prefix" && -z "$comment_start_line_no" && "$line" =~ ^[[:blank:]]*"$multi_line_comment_prefix" ]]; then
+            log_debug 5 "$file" "$line_no" "Multiline comment started: $line"
+            comment_start_line_no="$line_no"
+            if [[ "$line" =~ ^\s*"$multi_line_comment_prefix".*$multi_line_comment_suffix\s*$ ]]; then
+                log_debug 5 "$file" "$line_no" "Multiline comment ended on the same line."
+                comment_end_line_no="$line_no"
+            fi
+        elif [[ -n "$multi_line_comment_suffix" && -n "$comment_start_line_no" && "$line" =~ "$multi_line_comment_suffix"$ ]]; then
+            log_debug 5 "$file" "$line_no" "Ended multiline comment, started on line ${b}$comment_start_line_no${B}: $line"
+            comment_end_line_no="$line_no"
+        elif [[ -n "$single_line_comment_prefix" && "$line" =~ ^[[:blank:]]*"$single_line_comment_prefix" ]]; then
+            log_debug 5 "$file" "$line_no" "Single-line comment found: $line"
+            comment_start_line_no="$line_no"
+            comment_end_line_no="$line_no"
+        fi
+
+        # The second step in each iteration is to determine if this line has a comment with
+        # a `<WET:ignore/>` tag and thus has to be ignored, or whether it's part of a a range of lines
+        # between `<WET:ignore>` and `</WET:ignore>` tags.
+        if [[ -n "$comment_start_line_no" && "$line" =~ "$SINGLE_LINE_IGNORE_TAG" ]]
+        then
+            if [[ -z "$fragment_start_line_no" ]]; then
+                log_error "$file" "$line_no" "${b}SINGLE_LINE_IGNORE_TAG${B} tag found outside of ${b}<WET:${u}fragment-name${U}>${B} context."
+                break
+            fi
+
+            if [[ -n "$ignore_start_line_no" ]]; then
+                log_error "$file" "$line_no" "Stumbled on an ${b}<WET:ignore/>${B} element while already in another ${b}<WET:ignore>${B} context, started on ${comment_start_line_no}."
+                break
+            fi
+
+            ignore_start_line_no=$line_no
+            ignore_end_line_no=$line_no
+
+            log_debug 3 "$file" "$line_no" "${b}<WET:ignore/>${B} tag found."
+
+        elif [[ -n "$comment_start_line_no" && "$line" =~ "$IGNORE_START_TAG" ]]; then
+            if [[ -z "$fragment_start_line_no" ]]; then
+                log_error "$file" "$line_no" "${b}$IGNORE_START_TAG${B} tag found outside of ${b}<WET:${u}fragment-name${U}>${B} context."
+                break
+            fi
+
+            if [[ -n "$ignore_start_line_no" ]]; then
+                log_error "$file" "$line_no" "Stumbled on an ${b}<WET:ignore>${B} element while already in another ${b}<WET:ignore>${B} context, started on ${ignore_start_line_no}."
+                break
+            fi
+
+            ignore_start_line_no=$line_no
+
+            log_debug 3 "$file" "$line_no" "${b}<WET:ignore>${B} tag found."
+
+        elif [[ -n "$comment_start_line_no" && "$line" =~ "$IGNORE_END_TAG" ]]; then
+            if [[ -z "$ignore_start_line_no" ]]; then
+                log_error "$file" "$line_no" "Stumbled on an unopened ${b}</WET:ignore>${B} closing tag."
+                break
+            fi
+
+            ignore_end_line_no=$line_no
+
+            log_debug 3 "$file" "$line_no" "${b}</WET:ignore>${B} tag found."
+        fi
+
+        # If we _are_ ignoring lines, we will replace them with a `<WET:ignored lines="{lines}"/>` tag.
+        if [[ -n "$ignore_start_line_no" ]]; then
+            if [[ -n "$ignore_end_line_no" ]]; then
+                ignored_line_count=$((ignore_end_line_no - ignore_start_line_no + 1))
+                replacement_line=$(echo "$ignored_line_marker" | sed -E "s/\{lines\}/$ignored_line_count/")
+                fragment_lines+=("$replacement_line")
+                log_debug 1 "$file" "$line_no" "Substituted ${b}$ignored_line_count${B} lines with: $replacement_line"
+                ignore_start_line_no=
+                ignore_end_line_no=
+            fi
+            continue
+        fi
+
+        if [[ -n "$comment_start_line_no" && "$line" =~ $FRAGMENT_START_RE ]]; then
+            new_fragment_name="${BASH_REMATCH[1]}"
+            log_debug 1 "$file" "$line_no" "${b}<WET:$new_fragment_name>${B} tag encountered in comment."
+            if [[ -n "$new_fragment_name" && "$new_fragment_name" == "$fragment_name" ]]; then
+                log_error "$file" "$line_no" "New fragment ${b}<WET:$fragment_name>${B} while fragment ${b}<WET:$fragment_name>${B}, started on line $fragment_start_line_no, is still unclosed."
+                break  # Break out, back into outer loop.
+            fi
+            fragment_name="$new_fragment_name"
+            fragment_start_line_no="$comment_start_line_no"
+            fragment_repetitions[$fragment_name]=$((${fragment_repetitions[$fragment_name]:0} + 1))
+
+        elif [[ -n "$comment_start_line_no" && "$line" =~ $FRAGMENT_CLOSE_RE ]]; then
+            ended_fragment_name="${BASH_REMATCH[1]}"
+            log_debug 1 "$file" "$line_no" "${b}</WET:$ended_fragment_name>${B} tag encountered in comment."
+            if [[ -n "$ended_fragment_name" && "$ended_fragment_name" != "$fragment_name" ]]; then
+                log_error "$file" "$line_no" "Fragment ${b}$fragment_name${B} closed, but the unclused fragment started on line $fragment_start_line_no was called ${b}$fragment_name${B}."
+                break  # Break out, back into outer loop.
+            fi
+            fragment_end_line_no="$line_no"
+        fi
+
+        if [[ -n "$fragment_start_line_no" ]]; then
+            fragment_lines+=("$line")
+        fi
+
+        if [[ -n "$fragment_start_line_no" && -n "$fragment_end_line_no" ]]; then
+            if [[ -n "$comment_start_line_no" && -n "$comment_end_line_no" ]]; then
+                # Push fragment end line no. to potentially extend beyond the end tag,
+                # to the end of the comment.
+                fragment_end_line_no="$comment_end_line_no"
+            fi
+            fragment_repeat="${fragment_repetitions[$fragment_name]}"
+            fragment_dir="$working_dir/$fragment_name"
+            mkdir -p "$fragment_dir"
+            fragment_file="$fragment_dir/$fragment_repeat$file_extension"
+            meta_var_file="$fragment_dir/$fragment_repeat.wet.sh"
+            printf '%s\n' "${fragment_lines[@]}" > "$fragment_file"
+            log_info "Wrote fragment ${u}$fragment_name${U} to: ${u}$fragment_file${U}"
+            echo "wet_fragment_name=\"$fragment_name\"
+wet_file=\"$file\"
+wet_fragment_start_line_no=$fragment_start_line_no
+wet_fragment_end_line_no=$fragment_end_line_no
+wet_rep_filename=\"$(basename "$fragment_file")\"
+wet_rep_no=$fragment_repeat" > "$meta_var_file"
+            log_info "Wrote fragment ${u}$fragment_name${U} meta data to: ${u}$meta_var_file${U}"
+            fragment_name=
+            fragment_start_line_no=
+            fragment_end_line_no=
+            fragment_lines=()
+        fi
+
+        if [[ -n "$comment_start_line_no" && -n "$comment_end_line_no" ]]; then
+            comment_start_line_no=
+            comment_end_line_no=
+        fi
+    done < "$file"
+    if [[ -n "$comment_start_line_no" && -z "$comment_end_line_no" ]]; then
+        log_error "$file" "EOF" "Unclosed multi-line comment that started on line ${b}$comment_start_line_no${B}."
+    fi
+done
+
+for fragment_dir in "$working_dir"/*; do
+    rep_count=1
+    meta_var_file="$fragment_dir/$rep_count.wet.sh"
+    source <(sed -E "s/^wet_/wet_1_/" "$meta_var_file")
+    rep_a="$fragment_dir/$wet_1_rep_filename"
+
+    while true; do
+        rep_count=$((rep_count + 1))
+        meta_var_file="$fragment_dir/$rep_count.wet.sh"
+        [[ -f "$meta_var_file" ]] || break
+        source <(sed -E "s/^wet_/wet_n_/" "$meta_var_file")
+        rep_b="$fragment_dir/$wet_n_rep_filename"
+        diff_file="$fragment_dir/1--$rep_count.diff"
+
+        if ! diff \
+                --ignore-space-change \
+                --ignore-blank-lines \
+                --ignore-matching-lines '<WET:ignored[^>]*/>$' \
+                "$rep_a" "$rep_b" > "$diff_file"
+        then
+            log_error "Rep ${b}#1${B} of fragment ${b}$wet_1_fragment_name${B} differs from rep ${b}#$rep_count${B}: $diff_file"
+            exit 8
+        fi
+    done
+    log_info "All $((rep_count - 1)) reps of ${u}$wet_1_fragment_name${U} fragment in sync."
+done
+
+if [[ -d "$working_dir" && "$keep_working_dir" == 'never' ]]; then
+    rm -r "$working_dir"
+    log_info "Deleted working dir: ${u}$working_dir${U}"
+fi
